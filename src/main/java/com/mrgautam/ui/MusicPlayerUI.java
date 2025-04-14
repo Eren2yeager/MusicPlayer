@@ -1,0 +1,971 @@
+package com.mrgautam.ui;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FileDialog;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+
+import com.mrgautam.model.Song;
+import com.mrgautam.player.AudioPlayer;
+import com.mrgautam.service.SongService;
+
+import javafx.util.Duration;
+
+public class MusicPlayerUI extends JFrame {
+
+    private JLabel nowPlayingLabel;
+    private DefaultListModel<Song> listModel;
+    private JList<Song> songList;
+    private List<Song> filteredsearchedSongs = new ArrayList<>();
+    private AudioPlayer player;
+    private List<Song> songs;
+    private List<Song> searchedSongs;
+    JLabel playPauseLabel = new JLabel("▶️");
+    JLabel nextLabel = new JLabel("⏭️");
+    JLabel prevLabel = new JLabel("⏮️");
+    private JLabel shuffleLabel = new JLabel("🔀");
+    private JLabel repeatLabel = new JLabel("🔁");
+    private int currentIndex = -1;
+    boolean[] isVolumeVisible = {false};
+    boolean[] isPlaying = {false};
+    private JSlider seekSlider = new JSlider(0, 100, 0);
+    private Timer seekTimer;
+    private boolean isSeeking = false;
+    private JLabel currentTimeLabel = new JLabel("00:00");
+    private JLabel totalTimeLabel = new JLabel("00:00");
+    private boolean isShuffleEnabled = false;
+    private boolean isRepeatEnabled = false;
+    private List<Song> queue = new LinkedList<>();
+    private JTextField searchField;
+    private JPanel bottomPanel = new JPanel();
+    private JPanel searchResultsPanel;
+    private JLabel addSongLabel = new JLabel("➕ Add Song");
+    private SongService service = new SongService();
+
+    private Boolean isSearched =false;
+
+    public MusicPlayerUI() {
+        // Initialize JavaFX
+        new javafx.embed.swing.JFXPanel();
+        setTitle("🎵 fake spotify");
+        setSize(1800, 500);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        
+        songs= service.getAllSongs();
+        searchedSongs = service.getAllSongs();
+        listModel = new DefaultListModel<>();
+        for (Song song : searchedSongs) {
+            listModel.addElement(song);
+        }
+
+        player = new AudioPlayer();
+// -----------------------------------------------------------------------------------------------------------------------------
+
+        // -- songlist by search field
+        songList = new JList<>(listModel);
+        songList.setBackground(new Color(40, 40, 40));
+        songList.setForeground(Color.WHITE);
+        songList.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        songList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        songList.setFixedCellHeight(30);
+        songList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        // for song labels
+        songList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBackground(isSelected ? new Color(60, 60, 60) : new Color(30, 30, 30));
+                label.setForeground(Color.WHITE);
+                label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return label;
+            }
+        });
+
+// -----------------------------------------------------------------------------------------------------------------------------
+        // for add to queue popup menu
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem addToQueueItem = new JMenuItem("➕ Add to Queue");
+        addToQueueItem.setBackground(new Color(40, 40, 40));
+        addToQueueItem.setForeground(Color.WHITE);
+        popupMenu.add(addToQueueItem);
+        songList.setComponentPopupMenu(popupMenu);
+
+        // ----------------------------------------------------------------------------------
+        // for search field
+        searchField = new RoundedTextField(30); // Was 20, now 30 columns wide
+        searchField.setFont(new Font("Arial", Font.PLAIN, 14)); // Set font size
+        searchField.setPreferredSize(new Dimension(300, 40)); // Increase height too
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
+                new EmptyBorder(5, 10, 5, 10) // Padding inside the border
+        ));
+
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                searchField.getBorder(),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10) // padding inside text field
+        ));
+        searchField.setText("Search Songs...");
+        searchField.setForeground(Color.WHITE.brighter()); // Lighter text color
+
+        searchField.setBackground(new Color(40, 40, 40)); // Dark background
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                    
+                    isShuffleEnabled = false; // Disable shuffle when searching
+                    shuffleLabel.setForeground(Color.WHITE); // Reset shuffle label color
+                if (searchField.getText().equals("Search Songs...")) {
+                    isSearched = true;
+                    searchField.setText("");
+                    searchField.setForeground(Color.WHITE);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (searchField.getText().isEmpty()) {
+                    isSearched = false;
+                    searchedSongs.clear();
+                    currentIndex = songs.isEmpty() ? -1 : 0;
+                    searchField.setText("Search Songs...");
+                    searchField.setForeground(Color.GRAY);
+                    // Optional: refresh JList with full songs
+                    updateSongListDisplay(songs);
+                }
+
+                SwingUtilities.invokeLater(() -> {
+                    if (!songList.hasFocus()) {
+                        hideSearchPanel();
+                    }
+                });
+            }
+        });
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+        });
+
+        // ----dummy pannel to remove the focus
+        JPanel dummyPanel = new JPanel();
+        bottomPanel.setFocusable(true);
+
+        SwingUtilities.invokeLater(() -> {
+            bottomPanel.requestFocusInWindow(); // or mainPanel.requestFocusInWindow();
+        });
+        // ----------------------------------------------------------------------------------
+
+        JSlider volumeSlider = new JSlider(0, 100, 100);
+        JButton volumeButton = new JButton("🔊");
+
+        nowPlayingLabel = new JLabel("  ", JLabel.CENTER);
+        nowPlayingLabel.setForeground(Color.white);
+        nowPlayingLabel.setFont(new Font("Segoe UI Symbol", Font.BOLD, 14));  // Use a Unicode-friendly font
+
+        volumeSlider.setMajorTickSpacing(10);
+        volumeSlider.setPaintTicks(false);
+        volumeSlider.setPaintLabels(false);
+
+        // --------------------- Play/Pause Button ---------------------
+        playPauseLabel.setPreferredSize(new Dimension(80, 80)); // Set preferred size for the labe
+        playPauseLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 40)); // try different fonts
+        playPauseLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        playPauseLabel.setForeground(Color.WHITE); // Default color
+        playPauseLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        playPauseLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Song selectedSong = songList.getSelectedValue();
+                int selected = -1;
+                if (selectedSong != null) {
+                    selected = searchedSongs.indexOf(selectedSong); // Find in full list
+                    if (selected != -1) {
+                    }
+                }
+
+                if (player.isPlaying()) {
+                    player.pause();
+                    playPauseLabel.setText("▶️");
+                    nowPlayingLabel.setText("⏸️ Paused: " + searchedSongs.get(currentIndex).getTitle() + " - " + searchedSongs.get(currentIndex).getArtist());
+                } else {
+                    if (player.isPaused()) {
+                        player.resume();
+                        playPauseLabel.setText("⏸️");
+                        nowPlayingLabel.setText("🎶 Now Playing: " + searchedSongs.get(currentIndex).getTitle() + " - " + searchedSongs.get(currentIndex).getArtist());
+                    } else if (currentIndex != -1) {
+                        playCurrentSong();
+                        playPauseLabel.setText("⏸️");
+                    } else if (selected != -1) {
+                        currentIndex = selected;
+                        playCurrentSong();
+                        playPauseLabel.setText("⏸️");
+                    }
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                playPauseLabel.setForeground(Color.GREEN); // Hover effect
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!isPlaying[0]) {
+                    playPauseLabel.setForeground(Color.WHITE);
+                } // else keep it green
+            }
+        });
+        // --------------------- Play/Pause Button ends here ---------------------
+
+        //------------------------
+        // Next Button
+        nextLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
+        nextLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 25)); // try different fonts
+        nextLabel.setForeground(Color.WHITE); // Default color
+        nextLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        nextLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Auto-fallback: if searchedSongs is empty or cleared, fallback to main list
+                    
+                // if (searchedSongs == null || searchedSongs.isEmpty()) {
+                    isSearched = false;
+                    searchedSongs.clear();
+                    isShuffleEnabled = true; // auto-enable shuffle
+                    shuffleLabel.setForeground(Color.GREEN); // reflect UI change
+                    isRepeatEnabled = false; // disable repeat
+                    repeatLabel.setForeground(Color.WHITE); // reflect UI change
+                    currentIndex = (int) (Math.random() * songs.size());
+                // } else {
+                //     if (isShuffleEnabled) {
+                //         currentIndex = (int) (Math.random() * searchedSongs.size());
+                //     } else {
+                //         currentIndex++;
+                //         if (currentIndex >= searchedSongs.size()) {
+                //             currentIndex = 0;
+                //         }
+                //     }
+                // }
+        
+                playCurrentSong();
+                playPauseLabel.setText("⏸️");
+            }
+        
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                nextLabel.setForeground(Color.GREEN); // Hover effect
+            }
+        
+            @Override
+            public void mouseExited(MouseEvent e) {
+                nextLabel.setForeground(Color.WHITE);
+            }
+        });
+        
+
+        //    /-------------------next button ends here------------------
+        // --------------------- Previous Button ---------------------
+        prevLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
+        prevLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 25)); // try different fonts
+        prevLabel.setForeground(Color.WHITE); // Default color
+        prevLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        prevLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                player.stop();
+        
+                // Auto-fallback logic if searchedSongs is empty
+                // if (searchedSongs == null || searchedSongs.isEmpty()) {
+                    isSearched = false;
+                    isShuffleEnabled = true;
+                    shuffleLabel.setForeground(Color.GREEN);
+                    isRepeatEnabled = false; // disable repeat
+                    repeatLabel.setForeground(Color.WHITE); // reflect UI change
+                    currentIndex = (int) (Math.random() * songs.size());
+                // } else {
+                //     currentIndex--;
+                //     if (currentIndex < 0) {
+                //         currentIndex = searchedSongs.size() - 1;
+                //     }
+                // }
+        
+                playCurrentSong();
+                playPauseLabel.setText("⏸️");
+            }
+        
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                prevLabel.setForeground(Color.GREEN); // Hover effect
+            }
+        
+            @Override
+            public void mouseExited(MouseEvent e) {
+                prevLabel.setForeground(Color.WHITE);
+            }
+        });
+        
+        // 
+        // 
+        // 
+        seekSlider = new JSlider(0, 100, 0);
+        seekSlider.setPreferredSize(new Dimension(400, 20)); // Custom height
+        seekSlider.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        seekSlider.setUI(new RoundedSliderUI(seekSlider));
+        seekSlider.setPreferredSize(new Dimension(400, 40));
+        seekSlider.setEnabled(false); // Disabled until a song plays
+        seekSlider.setValue(0);
+
+        seekSlider.addChangeListener(e -> {
+            if (!seekSlider.getValueIsAdjusting() && player.isSeekable()) {
+                double percent = seekSlider.getValue() / 100.0;
+                player.seekTo(percent);
+            }
+        });
+        seekSlider.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                isSeeking = true; // Pause updates while dragging
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                isSeeking = false;
+                if (player.isSeekable()) {
+                    double percent = seekSlider.getValue() / 100.0;
+                    player.seekTo(percent); // Seek only after releasing
+                }
+            }
+        });
+
+        seekSlider.addChangeListener(e -> {
+            if (isSeeking && player.isSeekable()) {
+                // Optional: visually update UI while dragging if needed
+            }
+        });
+
+        volumeSlider.addChangeListener(e -> {
+            int value = volumeSlider.getValue();
+            double volume = value / 100.0;
+            player.setVolume(volume);
+        });
+        volumeSlider.setVisible(false); // hidden by default
+
+        volumeButton.addActionListener(e -> {
+            isVolumeVisible[0] = !isVolumeVisible[0];
+            volumeSlider.setVisible(isVolumeVisible[0]);
+            revalidate();
+            repaint();
+        });
+
+        // ------experiment - shuffleLabel and Repeatlabel-----------------------------------
+        shuffleLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
+        shuffleLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 15)); // try different fonts
+        shuffleLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 0));
+        shuffleLabel.setForeground(Color.WHITE); // Default color
+        shuffleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        shuffleLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+                isShuffleEnabled = !isShuffleEnabled;
+
+                if (isShuffleEnabled) {
+                    isRepeatEnabled = false;
+                    repeatLabel.setForeground(Color.WHITE);
+                    shuffleLabel.setForeground(Color.GREEN);
+
+                } else {
+                    shuffleLabel.setForeground(Color.WHITE); // Reset on exit
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                shuffleLabel.setForeground(Color.GREEN); // Hover effect
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!isShuffleEnabled) {
+                    shuffleLabel.setForeground(Color.WHITE);
+                } // else keep it green
+            }
+        });
+
+        // repeat label
+        repeatLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
+        repeatLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 15)); // try different fonts
+        repeatLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 0));
+        repeatLabel.setForeground(Color.WHITE); // Default color
+        repeatLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        repeatLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                
+                isRepeatEnabled = !isRepeatEnabled;
+
+                if (isRepeatEnabled) {
+                    isShuffleEnabled = false;
+                    shuffleLabel.setForeground(Color.WHITE);
+                    repeatLabel.setForeground(Color.GREEN);
+                    
+                } else {
+                    repeatLabel.setForeground(Color.WHITE); // Reset on exit
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                repeatLabel.setForeground(Color.GREEN); // Hover effect
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!isRepeatEnabled) {
+                    repeatLabel.setForeground(Color.WHITE);
+                } // else keep it green
+            }
+        });
+        
+        addToQueueItem.addActionListener(e -> {
+            Song selectedSong = songList.getSelectedValue(); // safer and cleaner
+        
+            if (selectedSong != null) {
+                Song currentSong = null;
+        
+                if (isSearched && currentIndex >= 0 && currentIndex < searchedSongs.size()) {
+                    currentSong = searchedSongs.get(currentIndex);
+                } else if (!isSearched && currentIndex >= 0 && currentIndex < songs.size()) {
+                    currentSong = songs.get(currentIndex);
+                }
+        
+                if (currentSong != null && !selectedSong.equals(currentSong)) {
+                    queue.add(selectedSong);
+                    nowPlayingLabel.setText("✅ Added to Queue: " + selectedSong.getTitle() + " - " + selectedSong.getArtist());
+                }
+            }
+        });
+        
+        // ----------------------------------------------------------------------
+        //To make the right-click work more naturally (when user right-clicks but doesn’t select first), add this:
+        songList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    Song selectedSong = songList.getSelectedValue();
+                    if (selectedSong != null) {
+                        int indexInsearchedSongs = searchedSongs.indexOf(selectedSong); // Find in searched list
+                        if (indexInsearchedSongs != -1) {
+                            currentIndex = indexInsearchedSongs;
+                            isSearched = true; // ✅ tell the player to use searchedSongs list
+                            isShuffleEnabled = false; // Optional: disable shuffle
+                            shuffleLabel.setForeground(Color.WHITE);
+                            playCurrentSong();
+                        }
+                    }
+                }
+            }
+            
+            
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int index = songList.locationToIndex(e.getPoint());
+                    songList.setSelectedIndex(index);
+                }
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int index = songList.locationToIndex(e.getPoint());
+                    songList.setSelectedIndex(index);
+                }
+            }
+
+            // public void mouseEntered(java.awt.event.MouseEvent e) {
+            //     songList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            //     isSearched= true;
+            //     isShuffleEnabled = false;
+            // }
+            // public void mouseExited(java.awt.event.MouseEvent e) {
+            //     songList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            //     isSearched= false;
+            //     isShuffleEnabled = true;
+            // }
+            
+        });
+        
+        // addsong label ------------------------------------------------------
+        addSongLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Step 1: Choose File (MP3)
+                FileDialog fileDialog = new FileDialog((java.awt.Frame) null, "Select MP3 File", FileDialog.LOAD);
+                fileDialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".mp3"));
+                fileDialog.setVisible(true);
+                
+                String selectedFileName = fileDialog.getFile();
+                String selectedDir = fileDialog.getDirectory();
+                
+                if (selectedFileName != null) {
+                    File selectedFile = new File(selectedDir, selectedFileName);
+
+                    if (selectedFile != null && selectedFile.getName().toLowerCase().endsWith(".mp3")) {
+                        // Step 2: Custom Dark Themed Input Panel
+                        JTextField titleField = new RoundedTextField(50);
+                        JTextField artistField = new RoundedTextField(50);
+
+                        Font font = new Font("Segoe UI", Font.PLAIN, 14);
+                        Color bgColor = new Color(30, 30, 30, (int) (0.9f * 255)); // Semi-transparent black
+                        Color fgColor = Color.WHITE;
+
+                        titleField.setBackground(bgColor);
+                        titleField.setForeground(fgColor);
+                        titleField.setFont(font);
+                        titleField.setCaretColor(fgColor);
+                        titleField.setBorder(BorderFactory.createCompoundBorder(
+                                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
+                                new EmptyBorder(5, 10, 5, 10) // Padding inside the border
+                        ));
+
+                        titleField.setBorder(BorderFactory.createCompoundBorder(
+                                titleField.getBorder(),
+                                BorderFactory.createEmptyBorder(5, 10, 5, 10) // padding inside text field
+                        ));
+
+                        artistField.setBackground(bgColor);
+                        artistField.setForeground(fgColor);
+                        artistField.setFont(font);
+                        artistField.setCaretColor(fgColor);
+                        artistField.setBorder(BorderFactory.createCompoundBorder(
+                                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
+                                new EmptyBorder(5, 10, 5, 10) // Padding inside the border
+                        ));
+
+                        artistField.setBorder(BorderFactory.createCompoundBorder(
+                                artistField.getBorder(),
+                                BorderFactory.createEmptyBorder(5, 10, 5, 10) // padding inside text field
+                        ));
+
+                        JLabel titleLabel = new JLabel("Title:");
+                        JLabel artistLabel = new JLabel("Artist:");
+                        titleLabel.setForeground(fgColor);
+                        artistLabel.setForeground(fgColor);
+
+                        JPanel panel = new JPanel(new GridLayout(4, 1));
+                        panel.setBackground(bgColor);
+                        panel.add(titleLabel);
+                        panel.add(titleField);
+                        panel.add(artistLabel);
+                        panel.add(artistField);
+
+                        UIManager.put("Panel.background", Color.BLACK);
+                        UIManager.put("OptionPane.background", bgColor);
+                        UIManager.put("OptionPane.messageForeground", fgColor);
+                        UIManager.put("Button.background", new Color(50, 50, 50));
+                        UIManager.put("Button.foreground", Color.WHITE);
+                        UIManager.put("Button.font", font);
+
+                        int inputResult = JOptionPane.showConfirmDialog(
+                                null, panel, "Add Song Details", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE
+                        );
+
+                        if (inputResult == JOptionPane.OK_OPTION) {
+                            String title = titleField.getText().trim();
+                            String artist = artistField.getText().trim();
+
+                            if (!title.isEmpty() && !artist.isEmpty()) {
+                                Song newSong = new Song(0, title, artist, selectedFile.getAbsolutePath());
+                                boolean isSongAdded = service.addSong(newSong);
+
+                                if (isSongAdded) {
+                                    searchedSongs = service.getAllSongs();
+                                    listModel.clear();
+                                    for (Song song : searchedSongs) {
+                                        listModel.addElement(song);
+                                    }
+
+                                    filtersearchedSongs(); // refresh if searched
+                                    nowPlayingLabel.setText("🎉 Added: " + title + " - " + artist);
+                                    songList.setModel(listModel);
+                                } else {
+                                    nowPlayingLabel.setText("❌ Something went wrong with adding the song");
+                                }
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Title and artist must not be empty.");
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Please select a valid .mp3 file only.", "Invalid File", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                addSongLabel.setForeground(Color.WHITE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                addSongLabel.setForeground(Color.LIGHT_GRAY);
+            }
+        });
+
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 10));
+        searchPanel.setBackground(new Color(0, 0, 0, (int) (1.0f * 255))); // Set transparency using RGBA
+        searchPanel.add(searchField);
+        add(searchPanel, BorderLayout.NORTH);
+        // Create a panel to hold the slider  and control its width and currenttime and totaltime labels
+        currentTimeLabel.setForeground(new Color(255, 255, 255, (int) (0))); // Set transparency using RGBA
+        currentTimeLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        totalTimeLabel.setForeground(new Color(255, 255, 255, (int) (0))); // Set transparency using RGBA
+        totalTimeLabel.setFont(new Font("Arial", Font.BOLD, 12));
+
+        seekSlider.setPreferredSize(new Dimension(500, 7)); // 300px wide
+
+        JPanel sliderPanel = new JPanel();
+        sliderPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        sliderPanel.setOpaque(false); // Keep background transparent if needed
+        sliderPanel.setBorder(BorderFactory.createEmptyBorder(5, 15, 0, 10));
+
+        // Time Panel (for showing current and total time)
+        sliderPanel.add(currentTimeLabel, BorderLayout.WEST);
+        sliderPanel.add(seekSlider);
+        sliderPanel.add(totalTimeLabel, BorderLayout.EAST);
+
+        JPanel controls = new JPanel();
+        // controls.setLayout(new BorderLayout());
+        // Button Row (Horizontal)
+        JPanel buttonsPanel = new JPanel();
+        buttonsPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5)); // Horizontal button layout
+        buttonsPanel.setBackground(Color.BLACK);
+        buttonsPanel.add(shuffleLabel);
+        buttonsPanel.add(prevLabel);
+        buttonsPanel.add(playPauseLabel);
+        buttonsPanel.add(nextLabel);
+        buttonsPanel.add(repeatLabel);
+
+        // buttonsPanel.add(volumeButton);
+        // buttonsPanel.add(volumeSlider);
+        // Bottom Panel (Vertical stack)
+        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS)); // Vertical stacking
+        bottomPanel.setBackground(Color.BLACK);
+
+        bottomPanel.add(Box.createVerticalStrut(10)); // Spacing
+        bottomPanel.add(nowPlayingLabel); // 2. Now Playing above seek bar
+        nowPlayingLabel.setAlignmentX(bottomPanel.CENTER_ALIGNMENT);
+
+        bottomPanel.add(buttonsPanel); // First row: buttons
+
+        bottomPanel.add(sliderPanel, CENTER_ALIGNMENT); // Seek slider
+        bottomPanel.add(Box.createVerticalStrut(20)); // Spacing
+
+        bottomPanel.add(controls); // Optional controls panel (if any)
+
+        controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // ----------------------------------------------------------------------------------------------------
+        //  for search result pannel
+        searchResultsPanel = new JPanel(new BorderLayout());
+        searchResultsPanel.setVisible(false);
+        searchResultsPanel.setBackground(new Color(30, 30, 30));
+        searchResultsPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+        searchResultsPanel.add(new JScrollPane(songList), BorderLayout.CENTER);
+        searchResultsPanel.setBounds(searchField.getX(), searchField.getY() + searchField.getHeight(), searchField.getWidth(), 120);
+
+        // -- add song pannel
+        addSongLabel.setForeground(Color.LIGHT_GRAY);
+        addSongLabel.setFont(new Font("Seoge UI Symbol", Font.PLAIN, 14));
+        addSongLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        searchResultsPanel.add(addSongLabel, BorderLayout.SOUTH);
+
+        addSongLabel.setOpaque(true);
+        addSongLabel.setBackground(new Color(50, 50, 50));
+        addSongLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        // ----------------------------------------------------------------------------------------------------
+
+        // controls.add(volumePanel, BorderLayout.EAST);
+        add(searchPanel, BorderLayout.NORTH);
+        add(searchResultsPanel);
+        add(controls, BorderLayout.SOUTH);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        //    -------------------------------------------------------------------------------------
+        // Add a mouse listener to the search field to trigger the search when clicked
+        searchField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                searchField.requestFocusInWindow(); // Focus on the search field
+                filtersearchedSongs(); // Trigger search on click
+            }
+            // @Override
+            // public void mouseEntered(MouseEvent e) {
+            //     filtersearchedSongs();
+            //     showSearchPanel();
+
+            // }
+        });
+        //    -------------------------------------------------------------------------------------
+
+        MouseAdapter globalFocusListener = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                Component clicked = SwingUtilities.getDeepestComponentAt(e.getComponent(), e.getX(), e.getY());
+                if (clicked != searchField && clicked != songList) {
+                    hideSearchPanel();
+                    requestFocusInWindow();    // Remove focus from search
+                }
+            }
+        };
+
+        // Attach to all background components (mainPanel, bottomPanel, etc.)
+        bottomPanel.addMouseListener(globalFocusListener);
+        searchPanel.addMouseListener(globalFocusListener);
+        // buttonsPanel.addMouseListener(globalFocusListener);
+
+        // ...add to other panels if needed
+        // ---------------------------------------------------------------------------
+    }
+
+    // -------------------------------------------METHODS------------------------------------------------------
+private void playCurrentSong() {
+
+    if (searchedSongs == null || searchedSongs.isEmpty()) {
+        searchedSongs = new ArrayList<>(songs); // fallback to full playlist
+        isSearched = false;
+    }
+    List<Song> playList;
+
+    // Decide playlist based on search & shuffle state
+    if (!isSearched || isShuffleEnabled) {
+        playList = songs;
+    } else {
+        playList = searchedSongs;
+    }
+
+    // If shuffle is enabled, pick random index from 'songs'
+    if (isShuffleEnabled) {
+        currentIndex = (int) (Math.random() * songs.size());
+        playList = songs; // Always shuffle from full song list
+    }
+
+    // Handle empty playlist safely
+    if (playList.isEmpty() || currentIndex < 0 || currentIndex >= playList.size()) {
+        System.out.println("No valid song to play.");
+        return;
+    }
+
+    Song song;
+
+    // Priority to queue
+    if (!queue.isEmpty()) {
+        song = queue.remove(0);
+        currentIndex = playList.indexOf(song); // Use full list for indexing
+    } else {
+        song = playList.get(currentIndex);
+    }
+
+    nowPlayingLabel.setText("🎶 Now Playing: " + song.getTitle() + " - " + song.getArtist());
+    songList.setSelectedIndex(currentIndex);
+    isPlaying[0] = true;
+    playPauseLabel.setText("⏸️");
+    seekSlider.setValue(0);
+    currentTimeLabel.setForeground(new Color(255, 255, 255));
+    totalTimeLabel.setForeground(new Color(255, 255, 255));
+
+        final List<Song> finalPlayList = playList;
+        player.play(song.getId(), () -> {
+        if (isRepeatEnabled) {
+            playCurrentSong(); // Repeat
+            return;
+        }
+
+        if (!queue.isEmpty()) {
+            playCurrentSong(); // From queue
+            return;
+        }
+
+        if (isShuffleEnabled) {
+            currentIndex = (int) (Math.random() * songs.size());
+            playCurrentSong();
+            return;
+        }
+
+        // int nextIndex = currentIndex + 1;
+        // if (nextIndex < songs.size()) {
+            // currentIndex = nextIndex;
+            isSearched = false;
+            isShuffleEnabled =true; // auto-enable shuffle
+            shuffleLabel.setForeground(Color.GREEN); // reflect UI change
+            playCurrentSong();
+        // } else {
+        //     currentIndex = 0;
+        //     playCurrentSong(); // Loop
+        // }
+
+        stopSeekTimer();
+    });
+
+    startSeekTimer();
+}
+
+
+    private void startSeekTimer() {
+        stopSeekTimer();
+
+        seekSlider.setEnabled(true);
+        seekTimer = new Timer(500, (ActionEvent e) -> {
+            if (!isSeeking) {
+                Duration current = player.getCurrentTime();
+                Duration total = player.getTotalDuration();
+                if (!total.isUnknown() && total.toMillis() > 0) {
+                    int value = (int) ((current.toMillis() / total.toMillis()) * 100);
+
+                    // --- Prevent unnecessary change events ---
+                    javax.swing.event.ChangeListener[] listeners = seekSlider.getChangeListeners();
+                    for (javax.swing.event.ChangeListener listener : listeners) {
+                        seekSlider.removeChangeListener(listener);
+                    }
+
+                    seekSlider.setValue(value);
+
+                    for (javax.swing.event.ChangeListener listener : listeners) {
+                        seekSlider.addChangeListener(listener);
+                    }
+
+                    currentTimeLabel.setText(formatTime(current));
+                    totalTimeLabel.setText(formatTime(total));
+                }
+            }
+        });
+
+        seekTimer.start();
+    }
+
+    private void stopSeekTimer() {
+        if (seekTimer != null) {
+            seekTimer.stop();
+            seekTimer = null;
+        }
+    }
+
+    private String formatTime(Duration duration) {
+        int minutes = (int) duration.toMinutes();
+        int seconds = (int) (duration.toSeconds() % 60);
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    private void filtersearchedSongs() {
+        showSearchPanel();
+    
+        String searchText = searchField.getText().trim().toLowerCase();
+    
+        if (searchText.isEmpty()) {
+            // 🔧 Reset flags and lists when search is cleared
+            isSearched = false;
+            searchedSongs.clear();
+            filteredsearchedSongs.clear();
+            listModel.clear();
+    
+            updateSongListDisplay(songs); // Optional: update JList with all songs
+            hideSearchPanel();
+            return;
+        }
+    
+        // 🔎 Normal search logic
+        isSearched = true;
+        listModel.clear();
+        filteredsearchedSongs.clear();
+    
+        searchedSongs = service.getSearchedSongs(searchText); // Refresh the song list
+        for (Song song : searchedSongs) {
+            listModel.addElement(song);
+            filteredsearchedSongs.add(song);
+        }
+    
+        if (listModel.size() > 0) {
+            showSearchPanel();
+        } else {
+            Song nothingFound = new Song(0, "No results found", "", "");
+            listModel.addElement(nothingFound);
+            filteredsearchedSongs.add(nothingFound);
+        }
+    }
+
+    private void updateSongListDisplay(List<Song> songsToShow) {
+        listModel.clear();
+        for (Song song : songsToShow) {
+            listModel.addElement(song);
+        }
+        songList.setModel(listModel);
+    }
+    
+
+    private void showSearchPanel() {
+        // searchResultsPanel.setBounds(searchField.getX(), searchField.getY() + searchField.getHeight(),
+        // searchField.getWidth(), 120);
+        searchResultsPanel.setVisible(true);
+        searchResultsPanel.repaint();
+    }
+
+    private void hideSearchPanel() {
+        searchResultsPanel.setVisible(false);
+    }
+
+}
