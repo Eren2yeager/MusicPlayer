@@ -1,6 +1,7 @@
 package com.mrgautam.ui;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -79,18 +80,21 @@ public class MusicPlayerUI extends JFrame {
     private JPanel searchResultsPanel;
     private JLabel addSongLabel = new JLabel("➕ Add Song");
     private SongService service = new SongService();
+    private CardLayout centerLayout;
+    private JPanel centerpanel;
+    private RotatingWheelPanel rotatingWheePanel = new RotatingWheelPanel();
 
-    private Boolean isSearched =false;
+    private Boolean isSearched = false;
 
     public MusicPlayerUI() {
         // Initialize JavaFX
         new javafx.embed.swing.JFXPanel();
         setTitle("🎵 fake spotify");
-        setSize(1800, 500);
+        setSize(1924, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        
-        songs= service.getAllSongs();
+
+        songs = service.getAllSongs();
         searchedSongs = service.getAllSongs();
         listModel = new DefaultListModel<>();
         for (Song song : searchedSongs) {
@@ -98,7 +102,107 @@ public class MusicPlayerUI extends JFrame {
         }
 
         player = new AudioPlayer();
+
+        rotatingWheePanel.getPreferredSize(); // or 250x250
+
+        JPanel wheelWrapper = new JPanel(new GridLayout());
+
+        centerLayout = new CardLayout();
+        wheelWrapper.setOpaque(false); // Transparent if needed
+        wheelWrapper.add(rotatingWheePanel);
+        wheelWrapper.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0)); // No border
+        wheelWrapper.setOpaque(true);           // Ensure background is visible
+        wheelWrapper.setBackground(new Color(30, 30, 30, (int) (1.0f * 255))); // Semi-transparent background
+        wheelWrapper.repaint();                 // Force immediate redraw
+        wheelWrapper.revalidate();             // Update layout (if needed)
+
+        centerpanel = new JPanel(centerLayout);
+        centerpanel.add(wheelWrapper, "wheel");
 // -----------------------------------------------------------------------------------------------------------------------------
+
+        // for search field
+        searchField = new RoundedTextField(30); // Was 20, now 30 columns wide
+        searchField.setFont(new Font("Arial", Font.PLAIN, 14)); // Set font size
+        searchField.setPreferredSize(new Dimension(300, 40)); // Increase height too
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
+                new EmptyBorder(5, 10, 5, 10) // Padding inside the border
+        ));
+
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                searchField.getBorder(),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10) // padding inside text field
+        ));
+        searchField.setText("Search Songs...");
+        searchField.setForeground(Color.GRAY); // Lighter text color
+
+        searchField.setBackground(new Color(40, 40, 40)); // Dark background
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+
+                isShuffleEnabled = false; // Disable shuffle when searching
+                shuffleLabel.setForeground(Color.WHITE); // Reset shuffle label color
+                // centerLayout.show(centerpanel, "search");
+                if (searchField.getText().equals("Search Songs...")) {
+
+                    isSearched = true;
+
+                    searchField.setText("");
+                    searchField.setForeground(Color.WHITE);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (searchField.getText().isEmpty()) {
+                    centerLayout.show(centerpanel, "wheel");
+                    isSearched = false;
+                    searchedSongs.clear();
+                    currentIndex = songs.isEmpty() ? -1 : 0;
+                    searchField.setText("Search Songs...");
+                    searchField.setForeground(Color.GRAY);
+                    // Optional: refresh JList with full songs
+                    updateSongListDisplay(songs);
+                }
+
+                SwingUtilities.invokeLater(() -> {
+                    if (!songList.hasFocus()) {
+                        hideSearchPanel();
+                    }
+                });
+            }
+        });
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                filtersearchedSongs();
+            }
+        });
+
+        //    -------------------------------------------------------------------------------------
+        // Add a mouse listener to the search field to trigger the search when clicked
+        searchField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                searchField.requestFocusInWindow(); // Focus on the search field
+                filtersearchedSongs(); // Trigger search on click
+            }
+            // @Override
+            // public void mouseEntered(MouseEvent e) {
+            //     filtersearchedSongs();
+            //     showSearchPanel();
+
+            // }
+        });
 
         // -- songlist by search field
         songList = new JList<>(listModel);
@@ -132,70 +236,6 @@ public class MusicPlayerUI extends JFrame {
         songList.setComponentPopupMenu(popupMenu);
 
         // ----------------------------------------------------------------------------------
-        // for search field
-        searchField = new RoundedTextField(30); // Was 20, now 30 columns wide
-        searchField.setFont(new Font("Arial", Font.PLAIN, 14)); // Set font size
-        searchField.setPreferredSize(new Dimension(300, 40)); // Increase height too
-        searchField.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
-                new EmptyBorder(5, 10, 5, 10) // Padding inside the border
-        ));
-
-        searchField.setBorder(BorderFactory.createCompoundBorder(
-                searchField.getBorder(),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10) // padding inside text field
-        ));
-        searchField.setText("Search Songs...");
-        searchField.setForeground(Color.WHITE.brighter()); // Lighter text color
-
-        searchField.setBackground(new Color(40, 40, 40)); // Dark background
-        searchField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                    
-                    isShuffleEnabled = false; // Disable shuffle when searching
-                    shuffleLabel.setForeground(Color.WHITE); // Reset shuffle label color
-                if (searchField.getText().equals("Search Songs...")) {
-                    isSearched = true;
-                    searchField.setText("");
-                    searchField.setForeground(Color.WHITE);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (searchField.getText().isEmpty()) {
-                    isSearched = false;
-                    searchedSongs.clear();
-                    currentIndex = songs.isEmpty() ? -1 : 0;
-                    searchField.setText("Search Songs...");
-                    searchField.setForeground(Color.GRAY);
-                    // Optional: refresh JList with full songs
-                    updateSongListDisplay(songs);
-                }
-
-                SwingUtilities.invokeLater(() -> {
-                    if (!songList.hasFocus()) {
-                        hideSearchPanel();
-                    }
-                });
-            }
-        });
-
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                filtersearchedSongs();
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                filtersearchedSongs();
-            }
-
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                filtersearchedSongs();
-            }
-        });
-
         // ----dummy pannel to remove the focus
         JPanel dummyPanel = new JPanel();
         bottomPanel.setFocusable(true);
@@ -224,32 +264,54 @@ public class MusicPlayerUI extends JFrame {
         playPauseLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         playPauseLabel.addMouseListener(new MouseAdapter() {
+            List<Song> tempList;
+
+            // Create a copy of the list
             @Override
             public void mouseClicked(MouseEvent e) {
+                if (!isSearched) {
+                    tempList = new ArrayList<>(songs);
+                } else {
+                    tempList = new ArrayList<>(searchedSongs);
+                }
+
                 Song selectedSong = songList.getSelectedValue();
                 int selected = -1;
+                if (selectedSong == null || searchedSongs.isEmpty()) {
+                    System.out.println("search the song"); // Find in full list
+                }
+
                 if (selectedSong != null) {
-                    selected = searchedSongs.indexOf(selectedSong); // Find in full list
+                    selected = tempList.indexOf(selectedSong); // Find in full list
                     if (selected != -1) {
                     }
                 }
 
                 if (player.isPlaying()) {
                     player.pause();
+                    rotatingWheePanel.stopRotation();
+
                     playPauseLabel.setText("▶️");
-                    nowPlayingLabel.setText("⏸️ Paused: " + searchedSongs.get(currentIndex).getTitle() + " - " + searchedSongs.get(currentIndex).getArtist());
+                    playPauseLabel.setForeground(Color.WHITE); // Reset color
+                    nowPlayingLabel.setText("⏸️ Paused: " + tempList.get(currentIndex).getTitle() + " - " + tempList.get(currentIndex).getArtist());
                 } else {
                     if (player.isPaused()) {
+                        rotatingWheePanel.startRotation();
+
                         player.resume();
+                        playPauseLabel.setForeground(Color.GREEN); // Reset color
                         playPauseLabel.setText("⏸️");
-                        nowPlayingLabel.setText("🎶 Now Playing: " + searchedSongs.get(currentIndex).getTitle() + " - " + searchedSongs.get(currentIndex).getArtist());
+                        nowPlayingLabel.setText("🎶 Now Playing: " + tempList.get(currentIndex).getTitle() + " - " + tempList.get(currentIndex).getArtist());
                     } else if (currentIndex != -1) {
                         playCurrentSong();
                         playPauseLabel.setText("⏸️");
+                        playPauseLabel.setForeground(Color.GREEN); // Reset color
                     } else if (selected != -1) {
                         currentIndex = selected;
                         playCurrentSong();
                         playPauseLabel.setText("⏸️");
+                        playPauseLabel.setForeground(Color.GREEN); // Reset color
+
                     }
                 }
             }
@@ -261,9 +323,10 @@ public class MusicPlayerUI extends JFrame {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (!isPlaying[0]) {
-                    playPauseLabel.setForeground(Color.WHITE);
+                if (!player.isPlaying()) {
+                    playPauseLabel.setForeground(Color.WHITE); // Reset color
                 } // else keep it green
+                // else keep it green
             }
         });
         // --------------------- Play/Pause Button ends here ---------------------
@@ -279,15 +342,15 @@ public class MusicPlayerUI extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Auto-fallback: if searchedSongs is empty or cleared, fallback to main list
-                    
+
                 // if (searchedSongs == null || searchedSongs.isEmpty()) {
-                    isSearched = false;
-                    searchedSongs.clear();
-                    isShuffleEnabled = true; // auto-enable shuffle
-                    shuffleLabel.setForeground(Color.GREEN); // reflect UI change
-                    isRepeatEnabled = false; // disable repeat
-                    repeatLabel.setForeground(Color.WHITE); // reflect UI change
-                    currentIndex = (int) (Math.random() * songs.size());
+                isSearched = false;
+                searchedSongs.clear();
+                isShuffleEnabled = true; // auto-enable shuffle
+                shuffleLabel.setForeground(Color.GREEN); // reflect UI change
+                isRepeatEnabled = false; // disable repeat
+                repeatLabel.setForeground(Color.WHITE); // reflect UI change
+                currentIndex = (int) (Math.random() * songs.size());
                 // } else {
                 //     if (isShuffleEnabled) {
                 //         currentIndex = (int) (Math.random() * searchedSongs.size());
@@ -298,22 +361,21 @@ public class MusicPlayerUI extends JFrame {
                 //         }
                 //     }
                 // }
-        
+
                 playCurrentSong();
                 playPauseLabel.setText("⏸️");
             }
-        
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 nextLabel.setForeground(Color.GREEN); // Hover effect
             }
-        
+
             @Override
             public void mouseExited(MouseEvent e) {
                 nextLabel.setForeground(Color.WHITE);
             }
         });
-        
 
         //    /-------------------next button ends here------------------
         // --------------------- Previous Button ---------------------
@@ -325,37 +387,37 @@ public class MusicPlayerUI extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 player.stop();
-        
+
                 // Auto-fallback logic if searchedSongs is empty
                 // if (searchedSongs == null || searchedSongs.isEmpty()) {
-                    isSearched = false;
-                    isShuffleEnabled = true;
-                    shuffleLabel.setForeground(Color.GREEN);
-                    isRepeatEnabled = false; // disable repeat
-                    repeatLabel.setForeground(Color.WHITE); // reflect UI change
-                    currentIndex = (int) (Math.random() * songs.size());
+                isSearched = false;
+                isShuffleEnabled = true;
+                shuffleLabel.setForeground(Color.GREEN);
+                isRepeatEnabled = false; // disable repeat
+                repeatLabel.setForeground(Color.WHITE); // reflect UI change
+                currentIndex = (int) (Math.random() * songs.size());
                 // } else {
                 //     currentIndex--;
                 //     if (currentIndex < 0) {
                 //         currentIndex = searchedSongs.size() - 1;
                 //     }
                 // }
-        
+
                 playCurrentSong();
                 playPauseLabel.setText("⏸️");
             }
-        
+
             @Override
             public void mouseEntered(MouseEvent e) {
                 prevLabel.setForeground(Color.GREEN); // Hover effect
             }
-        
+
             @Override
             public void mouseExited(MouseEvent e) {
                 prevLabel.setForeground(Color.WHITE);
             }
         });
-        
+
         // 
         // 
         // 
@@ -451,18 +513,18 @@ public class MusicPlayerUI extends JFrame {
         repeatLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 0));
         repeatLabel.setForeground(Color.WHITE); // Default color
         repeatLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        
+
         repeatLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                
+
                 isRepeatEnabled = !isRepeatEnabled;
 
                 if (isRepeatEnabled) {
                     isShuffleEnabled = false;
                     shuffleLabel.setForeground(Color.WHITE);
                     repeatLabel.setForeground(Color.GREEN);
-                    
+
                 } else {
                     repeatLabel.setForeground(Color.WHITE); // Reset on exit
                 }
@@ -472,7 +534,7 @@ public class MusicPlayerUI extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 repeatLabel.setForeground(Color.GREEN); // Hover effect
             }
-            
+
             @Override
             public void mouseExited(MouseEvent e) {
                 if (!isRepeatEnabled) {
@@ -480,47 +542,44 @@ public class MusicPlayerUI extends JFrame {
                 } // else keep it green
             }
         });
-        
+
         addToQueueItem.addActionListener(e -> {
             Song selectedSong = songList.getSelectedValue(); // safer and cleaner
-        
+
             if (selectedSong != null) {
-                Song currentSong = null;
-        
+                Song currentSong;
                 if (isSearched && currentIndex >= 0 && currentIndex < searchedSongs.size()) {
                     currentSong = searchedSongs.get(currentIndex);
                 } else if (!isSearched && currentIndex >= 0 && currentIndex < songs.size()) {
                     currentSong = songs.get(currentIndex);
+                } else {
+                    currentSong = null;
                 }
-        
+
                 if (currentSong != null && !selectedSong.equals(currentSong)) {
                     queue.add(selectedSong);
                     nowPlayingLabel.setText("✅ Added to Queue: " + selectedSong.getTitle() + " - " + selectedSong.getArtist());
                 }
             }
         });
-        
         // ----------------------------------------------------------------------
         //To make the right-click work more naturally (when user right-clicks but doesn’t select first), add this:
         songList.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
+                isSearched = true;
                 if (e.getClickCount() == 2) {
                     Song selectedSong = songList.getSelectedValue();
                     if (selectedSong != null) {
-                        int indexInsearchedSongs = searchedSongs.indexOf(selectedSong); // Find in searched list
+                        int indexInsearchedSongs = searchedSongs.indexOf(selectedSong); // Find in full list
                         if (indexInsearchedSongs != -1) {
                             currentIndex = indexInsearchedSongs;
-                            isSearched = true; // ✅ tell the player to use searchedSongs list
-                            isShuffleEnabled = false; // Optional: disable shuffle
-                            shuffleLabel.setForeground(Color.WHITE);
                             playCurrentSong();
                         }
                     }
                 }
             }
-            
-            
+
             @Override
             public void mousePressed(java.awt.event.MouseEvent e) {
                 if (e.isPopupTrigger()) {
@@ -536,20 +595,8 @@ public class MusicPlayerUI extends JFrame {
                     songList.setSelectedIndex(index);
                 }
             }
-
-            // public void mouseEntered(java.awt.event.MouseEvent e) {
-            //     songList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            //     isSearched= true;
-            //     isShuffleEnabled = false;
-            // }
-            // public void mouseExited(java.awt.event.MouseEvent e) {
-            //     songList.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            //     isSearched= false;
-            //     isShuffleEnabled = true;
-            // }
-            
         });
-        
+
         // addsong label ------------------------------------------------------
         addSongLabel.addMouseListener(new MouseAdapter() {
             @Override
@@ -558,10 +605,10 @@ public class MusicPlayerUI extends JFrame {
                 FileDialog fileDialog = new FileDialog((java.awt.Frame) null, "Select MP3 File", FileDialog.LOAD);
                 fileDialog.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".mp3"));
                 fileDialog.setVisible(true);
-                
+
                 String selectedFileName = fileDialog.getFile();
                 String selectedDir = fileDialog.getDirectory();
-                
+
                 if (selectedFileName != null) {
                     File selectedFile = new File(selectedDir, selectedFileName);
 
@@ -728,6 +775,7 @@ public class MusicPlayerUI extends JFrame {
         searchResultsPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
         searchResultsPanel.add(new JScrollPane(songList), BorderLayout.CENTER);
         searchResultsPanel.setBounds(searchField.getX(), searchField.getY() + searchField.getHeight(), searchField.getWidth(), 120);
+        centerpanel.add(searchResultsPanel, "search");
 
         // -- add song pannel
         addSongLabel.setForeground(Color.LIGHT_GRAY);
@@ -740,28 +788,12 @@ public class MusicPlayerUI extends JFrame {
         addSongLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         // ----------------------------------------------------------------------------------------------------
 
+        //    -------------------------------------------------------------------------------------
         // controls.add(volumePanel, BorderLayout.EAST);
         add(searchPanel, BorderLayout.NORTH);
-        add(searchResultsPanel);
+        add(centerpanel);
         add(controls, BorderLayout.SOUTH);
         add(bottomPanel, BorderLayout.SOUTH);
-
-        //    -------------------------------------------------------------------------------------
-        // Add a mouse listener to the search field to trigger the search when clicked
-        searchField.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                searchField.requestFocusInWindow(); // Focus on the search field
-                filtersearchedSongs(); // Trigger search on click
-            }
-            // @Override
-            // public void mouseEntered(MouseEvent e) {
-            //     filtersearchedSongs();
-            //     showSearchPanel();
-
-            // }
-        });
-        //    -------------------------------------------------------------------------------------
 
         MouseAdapter globalFocusListener = new MouseAdapter() {
             @Override
@@ -777,94 +809,92 @@ public class MusicPlayerUI extends JFrame {
         // Attach to all background components (mainPanel, bottomPanel, etc.)
         bottomPanel.addMouseListener(globalFocusListener);
         searchPanel.addMouseListener(globalFocusListener);
-        // buttonsPanel.addMouseListener(globalFocusListener);
+        buttonsPanel.addMouseListener(globalFocusListener);
 
         // ...add to other panels if needed
         // ---------------------------------------------------------------------------
     }
 
     // -------------------------------------------METHODS------------------------------------------------------
-private void playCurrentSong() {
+    private void playCurrentSong() {
+        // centerLayout.show(centerpanel, "wheel");
+        rotatingWheePanel.startRotation();
+        playPauseLabel.setForeground(Color.GREEN); // Reset color
+        hideSearchPanel();
+        List<Song> playList;
 
-    if (searchedSongs == null || searchedSongs.isEmpty()) {
-        searchedSongs = new ArrayList<>(songs); // fallback to full playlist
-        isSearched = false;
-    }
-    List<Song> playList;
+        // Decide playlist based on search & shuffle state
+        if (!isSearched || isShuffleEnabled) {
+            playList = songs;
+        } else {
+            playList = searchedSongs;
+        }
 
-    // Decide playlist based on search & shuffle state
-    if (!isSearched || isShuffleEnabled) {
-        playList = songs;
-    } else {
-        playList = searchedSongs;
-    }
+        // If shuffle is enabled, pick random index from 'songs'
+        if (isShuffleEnabled) {
+            currentIndex = (int) (Math.random() * songs.size());
+            playList = songs; // Always shuffle from full song list
+        }
 
-    // If shuffle is enabled, pick random index from 'songs'
-    if (isShuffleEnabled) {
-        currentIndex = (int) (Math.random() * songs.size());
-        playList = songs; // Always shuffle from full song list
-    }
+        // Handle empty playlist safely
+        if (playList.isEmpty() || currentIndex < 0 || currentIndex >= playList.size()) {
+            System.out.println("No valid song to play.");
+            return;
+        }
 
-    // Handle empty playlist safely
-    if (playList.isEmpty() || currentIndex < 0 || currentIndex >= playList.size()) {
-        System.out.println("No valid song to play.");
-        return;
-    }
+        Song song;
 
-    Song song;
+        // Priority to queue
+        if (!queue.isEmpty()) {
+            song = queue.remove(0);
+            currentIndex = playList.indexOf(song); // Use full list for indexing
+        } else {
+            song = playList.get(currentIndex);
+        }
 
-    // Priority to queue
-    if (!queue.isEmpty()) {
-        song = queue.remove(0);
-        currentIndex = playList.indexOf(song); // Use full list for indexing
-    } else {
-        song = playList.get(currentIndex);
-    }
-
-    nowPlayingLabel.setText("🎶 Now Playing: " + song.getTitle() + " - " + song.getArtist());
-    songList.setSelectedIndex(currentIndex);
-    isPlaying[0] = true;
-    playPauseLabel.setText("⏸️");
-    seekSlider.setValue(0);
-    currentTimeLabel.setForeground(new Color(255, 255, 255));
-    totalTimeLabel.setForeground(new Color(255, 255, 255));
+        nowPlayingLabel.setText("🎶 Now Playing: " + song.getTitle() + " - " + song.getArtist());
+        songList.setSelectedIndex(currentIndex);
+        isPlaying[0] = true;
+        playPauseLabel.setText("⏸️");
+        seekSlider.setValue(0);
+        currentTimeLabel.setForeground(new Color(255, 255, 255));
+        totalTimeLabel.setForeground(new Color(255, 255, 255));
 
         final List<Song> finalPlayList = playList;
         player.play(song.getId(), () -> {
-        if (isRepeatEnabled) {
-            playCurrentSong(); // Repeat
-            return;
-        }
+            if (isRepeatEnabled) {
+                playCurrentSong(); // Repeat
+                return;
+            }
 
-        if (!queue.isEmpty()) {
-            playCurrentSong(); // From queue
-            return;
-        }
+            if (!queue.isEmpty()) {
+                playCurrentSong(); // From queue
+                return;
+            }
 
-        if (isShuffleEnabled) {
-            currentIndex = (int) (Math.random() * songs.size());
-            playCurrentSong();
-            return;
-        }
+            if (isShuffleEnabled) {
+                currentIndex = (int) (Math.random() * songs.size());
+                playCurrentSong();
+                return;
+            }
 
-        // int nextIndex = currentIndex + 1;
-        // if (nextIndex < songs.size()) {
+            // int nextIndex = currentIndex + 1;
+            // if (nextIndex < songs.size()) {
             // currentIndex = nextIndex;
             isSearched = false;
-            isShuffleEnabled =true; // auto-enable shuffle
+            isShuffleEnabled = true; // auto-enable shuffle
             shuffleLabel.setForeground(Color.GREEN); // reflect UI change
             playCurrentSong();
-        // } else {
-        //     currentIndex = 0;
-        //     playCurrentSong(); // Loop
-        // }
+            // } else {
+            //     currentIndex = 0;
+            //     playCurrentSong(); // Loop
+            // }
 
-        stopSeekTimer();
-    });
+            stopSeekTimer();
+        });
 
-    startSeekTimer();
-}
-
+        startSeekTimer();
+    }
 
     private void startSeekTimer() {
         stopSeekTimer();
@@ -913,32 +943,33 @@ private void playCurrentSong() {
 
     private void filtersearchedSongs() {
         showSearchPanel();
-    
+
         String searchText = searchField.getText().trim().toLowerCase();
-    
+
         if (searchText.isEmpty()) {
             // 🔧 Reset flags and lists when search is cleared
             isSearched = false;
             searchedSongs.clear();
             filteredsearchedSongs.clear();
             listModel.clear();
-    
+
             updateSongListDisplay(songs); // Optional: update JList with all songs
             hideSearchPanel();
+            // centerLayout.show(centerpanel, "wheel"); // Show the wheel panel
             return;
         }
-    
+
         // 🔎 Normal search logic
         isSearched = true;
         listModel.clear();
         filteredsearchedSongs.clear();
-    
+
         searchedSongs = service.getSearchedSongs(searchText); // Refresh the song list
         for (Song song : searchedSongs) {
             listModel.addElement(song);
             filteredsearchedSongs.add(song);
         }
-    
+
         if (listModel.size() > 0) {
             showSearchPanel();
         } else {
@@ -955,17 +986,17 @@ private void playCurrentSong() {
         }
         songList.setModel(listModel);
     }
-    
 
     private void showSearchPanel() {
         // searchResultsPanel.setBounds(searchField.getX(), searchField.getY() + searchField.getHeight(),
         // searchField.getWidth(), 120);
-        searchResultsPanel.setVisible(true);
+        // searchResultsPanel.setVisible(true);
+        centerLayout.show(centerpanel, "search"); // Show the wheel panel
         searchResultsPanel.repaint();
     }
 
     private void hideSearchPanel() {
-        searchResultsPanel.setVisible(false);
+        centerLayout.show(centerpanel, "wheel"); // Show the wheel panel
     }
 
 }

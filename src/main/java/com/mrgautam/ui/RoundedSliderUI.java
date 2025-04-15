@@ -62,3 +62,4 @@ public class RoundedSliderUI extends BasicSliderUI {
         return new Dimension(24, 24); // width x height
     }
 }
+

@@ -19,5 +19,7 @@ com\mrgautam\ui\MusicPlayerUI$8.class
 com\mrgautam\ui\MusicPlayerUI$11.class
 com\mrgautam\ui\MusicPlayerUI$3.class
 com\mrgautam\ui\MusicPlayerUI$13.class
+com\mrgautam\ui\RotatingWheelPanel.class
+com\mrgautam\ui\MusicPlayerUI.class
 com\mrgautam\ui\MusicPlayerUI$5.class
 com\mrgautam\model\Song.class
