@@ -55,7 +55,6 @@ public class MusicPlayerUI extends JFrame {
     private JLabel nowPlayingLabel;
     private DefaultListModel<Song> listModel;
     private JList<Song> songList;
-    private List<Song> filteredsearchedSongs = new ArrayList<>();
     private AudioPlayer player;
     private List<Song> songs;
     private List<Song> searchedSongs;
@@ -79,12 +78,16 @@ public class MusicPlayerUI extends JFrame {
     private JPanel bottomPanel = new JPanel();
     private JPanel searchResultsPanel;
     private JLabel addSongLabel = new JLabel("➕ Add Song");
+    private JLabel downloadSongLabel = new JLabel(" ➕ Yt Link Download");
+
     private SongService service = new SongService();
     private CardLayout centerLayout;
     private JPanel centerpanel;
     private RotatingWheelPanel rotatingWheePanel = new RotatingWheelPanel();
+    private List<Song> prevList = new ArrayList<>();
 
     private Boolean isSearched = false;
+    private Boolean isPrev = false;
 
     public MusicPlayerUI() {
         // Initialize JavaFX
@@ -103,13 +106,12 @@ public class MusicPlayerUI extends JFrame {
 
         player = new AudioPlayer();
 
-        rotatingWheePanel.getPreferredSize(); // or 250x250
-
-        JPanel wheelWrapper = new JPanel(new GridLayout());
+        // rotatingWheePanel.setPreferredSize(new Dimension(300,300)); // or 250x250
+        JPanel wheelWrapper = new JPanel();
 
         centerLayout = new CardLayout();
         wheelWrapper.setOpaque(false); // Transparent if needed
-        wheelWrapper.add(rotatingWheePanel);
+        wheelWrapper.add(rotatingWheePanel, BorderLayout.CENTER);
         wheelWrapper.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0)); // No border
         wheelWrapper.setOpaque(true);           // Ensure background is visible
         wheelWrapper.setBackground(new Color(30, 30, 30, (int) (1.0f * 255))); // Semi-transparent background
@@ -150,6 +152,7 @@ public class MusicPlayerUI extends JFrame {
 
                     searchField.setText("");
                     searchField.setForeground(Color.WHITE);
+                    filtersearchedSongs();
                 }
             }
 
@@ -220,7 +223,7 @@ public class MusicPlayerUI extends JFrame {
                     boolean isSelected, boolean cellHasFocus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 label.setBackground(isSelected ? new Color(60, 60, 60) : new Color(30, 30, 30));
-                label.setForeground(Color.WHITE);
+                label.setForeground(isSelected ? Color.green : Color.white);
                 label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
                 return label;
             }
@@ -269,50 +272,50 @@ public class MusicPlayerUI extends JFrame {
             // Create a copy of the list
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!isSearched) {
-                    tempList = new ArrayList<>(songs);
-                } else {
-                    tempList = new ArrayList<>(searchedSongs);
-                }
+                // if (!isSearched) {
+                //     tempList = new ArrayList<>(songs);
+                // } else {
+                //     tempList = new ArrayList<>(searchedSongs);
+                // }
 
-                Song selectedSong = songList.getSelectedValue();
-                int selected = -1;
-                if (selectedSong == null || searchedSongs.isEmpty()) {
-                    System.out.println("search the song"); // Find in full list
-                }
-
-                if (selectedSong != null) {
-                    selected = tempList.indexOf(selectedSong); // Find in full list
-                    if (selected != -1) {
-                    }
-                }
-
+                // Song selectedSong = songList.getSelectedValue();
+                // int selected = -1;
+                // if (selectedSong == null || searchedSongs.isEmpty()) {
+                //     System.out.println("search the song"); // Find in full list
+                // }
+                // if (selectedSong != null) {
+                //     selected = tempList.indexOf(selectedSong); // Find in full list
+                //     if (selected != -1) {
+                //     }
+                // }
                 if (player.isPlaying()) {
                     player.pause();
+                    nowPlayingLabel.setForeground(Color.white);
                     rotatingWheePanel.stopRotation();
 
                     playPauseLabel.setText("▶️");
                     playPauseLabel.setForeground(Color.WHITE); // Reset color
-                    nowPlayingLabel.setText("⏸️ Paused: " + tempList.get(currentIndex).getTitle() + " - " + tempList.get(currentIndex).getArtist());
+                    nowPlayingLabel.setText("⏸️ Paused: " + service.getSongById(player.getMediaSongId()).getTitle() + " - " + service.getSongById(player.getMediaSongId()).getArtist());
                 } else {
                     if (player.isPaused()) {
                         rotatingWheePanel.startRotation();
 
                         player.resume();
+                        nowPlayingLabel.setForeground(Color.white);
                         playPauseLabel.setForeground(Color.GREEN); // Reset color
                         playPauseLabel.setText("⏸️");
-                        nowPlayingLabel.setText("🎶 Now Playing: " + tempList.get(currentIndex).getTitle() + " - " + tempList.get(currentIndex).getArtist());
-                    } else if (currentIndex != -1) {
-                        playCurrentSong();
-                        playPauseLabel.setText("⏸️");
-                        playPauseLabel.setForeground(Color.GREEN); // Reset color
-                    } else if (selected != -1) {
-                        currentIndex = selected;
-                        playCurrentSong();
-                        playPauseLabel.setText("⏸️");
-                        playPauseLabel.setForeground(Color.GREEN); // Reset color
+                        nowPlayingLabel.setText("🎶 Now Playing: " + service.getSongById(player.getMediaSongId()).getTitle() + " - " + service.getSongById(player.getMediaSongId()).getArtist());
+                    } //else if (currentIndex != -1) {
+                    //     playCurrentSong();
+                    //     playPauseLabel.setText("⏸️");
+                    //     playPauseLabel.setForeground(Color.GREEN); // Reset color
+                    // } else if (selected != -1) {
+                    //     currentIndex = selected;
+                    //     playCurrentSong();
+                    //     playPauseLabel.setText("⏸️");
+                    //     playPauseLabel.setForeground(Color.GREEN); // Reset color
 
-                    }
+                    // }
                 }
             }
 
@@ -344,8 +347,9 @@ public class MusicPlayerUI extends JFrame {
                 // Auto-fallback: if searchedSongs is empty or cleared, fallback to main list
 
                 // if (searchedSongs == null || searchedSongs.isEmpty()) {
-                isSearched = false;
+                // isSearched = false;
                 searchedSongs.clear();
+                isPrev = false; // disable previous
                 isShuffleEnabled = true; // auto-enable shuffle
                 shuffleLabel.setForeground(Color.GREEN); // reflect UI change
                 isRepeatEnabled = false; // disable repeat
@@ -387,24 +391,37 @@ public class MusicPlayerUI extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 player.stop();
+                isPrev = true;
+                isShuffleEnabled = false;
+                isRepeatEnabled = false; // disable repeat
 
                 // Auto-fallback logic if searchedSongs is empty
                 // if (searchedSongs == null || searchedSongs.isEmpty()) {
-                isSearched = false;
-                isShuffleEnabled = true;
-                shuffleLabel.setForeground(Color.GREEN);
-                isRepeatEnabled = false; // disable repeat
+                // isSearched = false;
                 repeatLabel.setForeground(Color.WHITE); // reflect UI change
-                currentIndex = (int) (Math.random() * songs.size());
-                // } else {
+                shuffleLabel.setForeground(Color.WHITE); // reflect UI change
+                if (prevList.isEmpty()) {
+                    // isPrev = false; // disable previous
+                    // isShuffleEnabled = true;
+                    // shuffleLabel.setForeground(Color.GREEN);
+                    // currentIndex = (int) (Math.random() * songs.size());
+                    player.stop();
+                    rotatingWheePanel.stopRotation();
+                    rotatingWheePanel.setVisible(false);
+                    nowPlayingLabel.setVisible(isPrev);
+                    nowPlayingLabel.setText("⏸️ No previous song found.");
+                    nowPlayingLabel.setForeground(Color.RED);
+                    playPauseLabel.setText("▶️");
+                } else {
+                    currentIndex = prevList.size() - 1;
+                    playCurrentSong();
+                    playPauseLabel.setText("⏸️");
+                }                // } else {
                 //     currentIndex--;
                 //     if (currentIndex < 0) {
                 //         currentIndex = searchedSongs.size() - 1;
                 //     }
                 // }
-
-                playCurrentSong();
-                playPauseLabel.setText("⏸️");
             }
 
             @Override
@@ -556,14 +573,16 @@ public class MusicPlayerUI extends JFrame {
                     currentSong = null;
                 }
 
-                if (currentSong != null && !selectedSong.equals(currentSong)) {
+                if (selectedSong != null) {
                     queue.add(selectedSong);
                     nowPlayingLabel.setText("✅ Added to Queue: " + selectedSong.getTitle() + " - " + selectedSong.getArtist());
+                    nowPlayingLabel.setForeground(Color.GREEN);
                 }
             }
         });
         // ----------------------------------------------------------------------
         //To make the right-click work more naturally (when user right-clicks but doesn’t select first), add this:
+
         songList.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -689,9 +708,12 @@ public class MusicPlayerUI extends JFrame {
 
                                     filtersearchedSongs(); // refresh if searched
                                     nowPlayingLabel.setText("🎉 Added: " + title + " - " + artist);
+                                    nowPlayingLabel.setForeground(Color.GREEN);
+
                                     songList.setModel(listModel);
                                 } else {
                                     nowPlayingLabel.setText("❌ Something went wrong with adding the song");
+                                    nowPlayingLabel.setForeground(Color.GREEN);
                                 }
                             } else {
                                 JOptionPane.showMessageDialog(null, "Title and artist must not be empty.");
@@ -705,12 +727,40 @@ public class MusicPlayerUI extends JFrame {
 
             @Override
             public void mouseEntered(MouseEvent e) {
-                addSongLabel.setForeground(Color.WHITE);
+                addSongLabel.setForeground(Color.green);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 addSongLabel.setForeground(Color.LIGHT_GRAY);
+
+            }
+        });
+
+        downloadSongLabel.addMouseListener(new MouseAdapter() {
+            // @Override
+            // public void mouseClicked(MouseEvent e) {
+            //     try {
+            //         ProcessBuilder pb = new ProcessBuilder("java", "A:\\SEMESTER 4\\java\\tutorial-broCode\\CallingFromAnotherProgram\\MainRunner.java");
+            //         // pb.inheritIO(); // To show the output from OtherProgram
+            //         Process process = pb.start();
+            //         process.waitFor(); // Wait for the other program to finish
+            //     } catch (IOException | InterruptedException ex) {
+            //         ex.printStackTrace();
+            //     }
+            //     // Implement your download logic here
+            //     nowPlayingLabel.setText("Downloading song(MP3) from YouTube...");
+            //     nowPlayingLabel.setForeground(Color.GREEN);
+            // }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                downloadSongLabel.setForeground(Color.green);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                downloadSongLabel.setForeground(Color.LIGHT_GRAY);
             }
         });
 
@@ -781,7 +831,20 @@ public class MusicPlayerUI extends JFrame {
         addSongLabel.setForeground(Color.LIGHT_GRAY);
         addSongLabel.setFont(new Font("Seoge UI Symbol", Font.PLAIN, 14));
         addSongLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        searchResultsPanel.add(addSongLabel, BorderLayout.SOUTH);
+        downloadSongLabel.setForeground(Color.LIGHT_GRAY);
+        downloadSongLabel.setFont(new Font("Seoge UI Symbol", Font.PLAIN, 14));
+        downloadSongLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        downloadSongLabel.setOpaque(true);
+        downloadSongLabel.setBackground(new Color(50, 50, 50));
+        downloadSongLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        JPanel addSongMethodsContainer = new JPanel(new BorderLayout());
+        addSongMethodsContainer.setOpaque(true);
+        addSongMethodsContainer.setBackground(new Color(50, 50, 50));
+        addSongMethodsContainer.add(addSongLabel, BorderLayout.WEST);
+        addSongMethodsContainer.add(downloadSongLabel, BorderLayout.EAST);
+        // addSongMethodsContainer(createHorizontalStrut())
+        searchResultsPanel.add(addSongMethodsContainer, BorderLayout.SOUTH);
 
         addSongLabel.setOpaque(true);
         addSongLabel.setBackground(new Color(50, 50, 50));
@@ -817,17 +880,19 @@ public class MusicPlayerUI extends JFrame {
 
     // -------------------------------------------METHODS------------------------------------------------------
     private void playCurrentSong() {
+        nowPlayingLabel.setForeground(Color.white);
         // centerLayout.show(centerpanel, "wheel");
-        rotatingWheePanel.startRotation();
+        rotatingWheePanel.setVisible(true);
+        rotatingWheePanel.startRotationAtNewSong();
         playPauseLabel.setForeground(Color.GREEN); // Reset color
         hideSearchPanel();
         List<Song> playList;
 
         // Decide playlist based on search & shuffle state
-        if (!isSearched || isShuffleEnabled) {
-            playList = songs;
-        } else {
+        if (isSearched) {
             playList = searchedSongs;
+        } else {
+            playList = songs;
         }
 
         // If shuffle is enabled, pick random index from 'songs'
@@ -836,18 +901,41 @@ public class MusicPlayerUI extends JFrame {
             playList = songs; // Always shuffle from full song list
         }
 
+
         // Handle empty playlist safely
         if (playList.isEmpty() || currentIndex < 0 || currentIndex >= playList.size()) {
+            // if(isPrev){
+            //     playList = prevList;
+            // } else{
+            //     playList = songs;
+            // }
+            // playList = songs;
+            if(isPrev){
+                playList = prevList;
+            }
+            System.out.println(currentIndex);
             System.out.println("No valid song to play.");
             return;
         }
 
-        Song song;
+        Song song = playList.get(currentIndex);
 
         // Priority to queue
-        if (!queue.isEmpty()) {
+        if (!queue.isEmpty() && !isRepeatEnabled && !isPrev) {
             song = queue.remove(0);
             currentIndex = playList.indexOf(song); // Use full list for indexing
+        } else if (isPrev) {
+            // if (prevList.isEmpty()) {
+            // player.stop();
+            // rotatingWheePanel.stopRotation();
+            // nowPlayingLabel.setVisible(isPrev);
+            // nowPlayingLabel.setText("⏸️ No previous song found.");
+            // } else {
+            song = prevList.remove(prevList.size() - 1); // Remove last played song
+            //         }if (service.getSongById(player.getMediaSongId()) == song) {
+            // song = prevList.remove(prevList.size() - 1); // Remove last played song
+            currentIndex = prevList.indexOf(song); // Use full list for indexing
+            // }
         } else {
             song = playList.get(currentIndex);
         }
@@ -859,6 +947,15 @@ public class MusicPlayerUI extends JFrame {
         seekSlider.setValue(0);
         currentTimeLabel.setForeground(new Color(255, 255, 255));
         totalTimeLabel.setForeground(new Color(255, 255, 255));
+
+        if (!isPrev || isShuffleEnabled) {
+            prevList.add(song);
+        }
+
+        for (Song prevSong : prevList) {
+            System.out.print(prevSong.getTitle() + "__");
+        }
+        System.out.println("\n-----------------");
 
         final List<Song> finalPlayList = playList;
         player.play(song.getId(), () -> {
@@ -882,6 +979,7 @@ public class MusicPlayerUI extends JFrame {
             // if (nextIndex < songs.size()) {
             // currentIndex = nextIndex;
             isSearched = false;
+            isPrev = false;
             isShuffleEnabled = true; // auto-enable shuffle
             shuffleLabel.setForeground(Color.GREEN); // reflect UI change
             playCurrentSong();
@@ -950,10 +1048,10 @@ public class MusicPlayerUI extends JFrame {
             // 🔧 Reset flags and lists when search is cleared
             isSearched = false;
             searchedSongs.clear();
-            filteredsearchedSongs.clear();
+            // filteredsearchedSongs.clear();
             listModel.clear();
 
-            updateSongListDisplay(songs); // Optional: update JList with all songs
+            // updateSongListDisplay(songs); // Optional: update JList with all songs
             hideSearchPanel();
             // centerLayout.show(centerpanel, "wheel"); // Show the wheel panel
             return;
@@ -962,12 +1060,12 @@ public class MusicPlayerUI extends JFrame {
         // 🔎 Normal search logic
         isSearched = true;
         listModel.clear();
-        filteredsearchedSongs.clear();
+        // filteredsearchedSongs.clear();
 
         searchedSongs = service.getSearchedSongs(searchText); // Refresh the song list
         for (Song song : searchedSongs) {
             listModel.addElement(song);
-            filteredsearchedSongs.add(song);
+            // filteredsearchedSongs.add(song);
         }
 
         if (listModel.size() > 0) {
@@ -975,7 +1073,7 @@ public class MusicPlayerUI extends JFrame {
         } else {
             Song nothingFound = new Song(0, "No results found", "", "");
             listModel.addElement(nothingFound);
-            filteredsearchedSongs.add(nothingFound);
+            // filteredsearchedSongs.add(nothingFound);
         }
     }
 

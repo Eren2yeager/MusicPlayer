@@ -11,14 +11,18 @@ import javafx.util.Duration;
 public class AudioPlayer {
     private MediaPlayer mediaPlayer;
     private boolean isPaused = false;
+    Media media;
+    int songId;
+    
 
     public void play(int songId, Runnable onEnd) {
+        this.songId = songId;
         if (mediaPlayer != null) {
             mediaPlayer.dispose();
         }
 
         try {
-            Media media = Song.getMedia(songId);
+            media = Song.getMedia(songId);
             mediaPlayer = new MediaPlayer(media);
 
             mediaPlayer.setOnEndOfMedia(onEnd);
@@ -28,6 +32,10 @@ public class AudioPlayer {
             e.printStackTrace();
             // Handle the exception appropriately, e.g., show an error message or log it
         }
+    }
+    
+    public int getMediaSongId() {
+        return this.songId;
     }
 
     public void pause() {

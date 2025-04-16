@@ -91,5 +91,29 @@ public class SongService {
         return searchedSongs;
     }
 
+    public Song getSongById (int id) {
+        Song song = null;
+        String query = "SELECT * FROM songs WHERE id = ?";
+        try (Connection conn = DBManager.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+    
+                stmt.setInt(1, id);
+                ResultSet rs = stmt.executeQuery();
+    
+                if (rs.next()) {
+                    song = new Song(
+                        rs.getInt("id"),
+                        rs.getString("title"),
+                        rs.getString("artist"),
+                        rs.getString("filepath")
+                    );
+                }
+    
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        return song;
+    }
+
     
 }
