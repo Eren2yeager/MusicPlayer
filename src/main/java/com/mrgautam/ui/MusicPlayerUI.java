@@ -16,10 +16,12 @@ import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -92,8 +94,16 @@ public class MusicPlayerUI extends JFrame {
     public MusicPlayerUI() {
         // Initialize JavaFX
         new javafx.embed.swing.JFXPanel();
+        try {
+            java.awt.Image icon = ImageIO.read(new File("src\\main\\resources\\icons\\converted_icon.png"));
+            icon = icon.getScaledInstance(280, 220, java.awt.Image.SCALE_SMOOTH);
+            // icon.setOpaque(true); // Removed as setOpaque is not applicable for Image
+            setIconImage(icon);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         setTitle("🎵 fake spotify");
-        setSize(1924, 500);
+        setSize(1500, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -263,6 +273,7 @@ public class MusicPlayerUI extends JFrame {
         playPauseLabel.setPreferredSize(new Dimension(80, 80)); // Set preferred size for the labe
         playPauseLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 40)); // try different fonts
         playPauseLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        playPauseLabel.setVerticalAlignment(SwingConstants.CENTER);
         playPauseLabel.setForeground(Color.WHITE); // Default color
         playPauseLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
@@ -338,6 +349,8 @@ public class MusicPlayerUI extends JFrame {
         // Next Button
         nextLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
         nextLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 25)); // try different fonts
+        nextLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        nextLabel.setVerticalAlignment(SwingConstants.CENTER);
         nextLabel.setForeground(Color.WHITE); // Default color
         nextLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
@@ -385,6 +398,8 @@ public class MusicPlayerUI extends JFrame {
         // --------------------- Previous Button ---------------------
         prevLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
         prevLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 25)); // try different fonts
+        prevLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        prevLabel.setVerticalAlignment(SwingConstants.CENTER);
         prevLabel.setForeground(Color.WHITE); // Default color
         prevLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         prevLabel.addMouseListener(new MouseAdapter() {
@@ -401,6 +416,7 @@ public class MusicPlayerUI extends JFrame {
                 repeatLabel.setForeground(Color.WHITE); // reflect UI change
                 shuffleLabel.setForeground(Color.WHITE); // reflect UI change
                 if (prevList.isEmpty()) {
+                    isPrev = false;
                     // isPrev = false; // disable previous
                     // isShuffleEnabled = true;
                     // shuffleLabel.setForeground(Color.GREEN);
@@ -408,10 +424,11 @@ public class MusicPlayerUI extends JFrame {
                     player.stop();
                     rotatingWheePanel.stopRotation();
                     rotatingWheePanel.setVisible(false);
-                    nowPlayingLabel.setVisible(isPrev);
+                    nowPlayingLabel.setVisible(true);
                     nowPlayingLabel.setText("⏸️ No previous song found.");
                     nowPlayingLabel.setForeground(Color.RED);
                     playPauseLabel.setText("▶️");
+                    playPauseLabel.setForeground(Color.WHITE);
                 } else {
                     currentIndex = prevList.size() - 1;
                     playCurrentSong();
@@ -491,7 +508,9 @@ public class MusicPlayerUI extends JFrame {
         // ------experiment - shuffleLabel and Repeatlabel-----------------------------------
         shuffleLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
         shuffleLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 15)); // try different fonts
-        shuffleLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 0));
+        shuffleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        shuffleLabel.setVerticalAlignment(SwingConstants.CENTER);
+        shuffleLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 5));
         shuffleLabel.setForeground(Color.WHITE); // Default color
         shuffleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
@@ -527,7 +546,9 @@ public class MusicPlayerUI extends JFrame {
         // repeat label
         repeatLabel.setPreferredSize(new Dimension(50, 50)); // Set preferred size for the labe
         repeatLabel.setFont(new Font("Seoge UI Symbol", Font.BOLD, 15)); // try different fonts
-        repeatLabel.setBorder(BorderFactory.createEmptyBorder(7, 0, 0, 0));
+        repeatLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        repeatLabel.setVerticalAlignment(SwingConstants.CENTER);
+        repeatLabel.setBorder(BorderFactory.createEmptyBorder(7, -5, 0, 0));
         repeatLabel.setForeground(Color.WHITE); // Default color
         repeatLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
@@ -538,6 +559,8 @@ public class MusicPlayerUI extends JFrame {
                 isRepeatEnabled = !isRepeatEnabled;
 
                 if (isRepeatEnabled) {
+                    isSearched = false; // disable search
+                    isPrev = false; // disable previous
                     isShuffleEnabled = false;
                     shuffleLabel.setForeground(Color.WHITE);
                     repeatLabel.setForeground(Color.GREEN);
@@ -588,6 +611,10 @@ public class MusicPlayerUI extends JFrame {
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 isSearched = true;
                 if (e.getClickCount() == 2) {
+                    isRepeatEnabled = false; // disable repeat
+                    repeatLabel.setForeground(Color.WHITE);
+                    isShuffleEnabled = false; // disable shuffle
+                    isPrev = false; // disable previous
                     Song selectedSong = songList.getSelectedValue();
                     if (selectedSong != null) {
                         int indexInsearchedSongs = searchedSongs.indexOf(selectedSong); // Find in full list
@@ -786,11 +813,10 @@ public class MusicPlayerUI extends JFrame {
         sliderPanel.add(seekSlider);
         sliderPanel.add(totalTimeLabel, BorderLayout.EAST);
 
-        JPanel controls = new JPanel();
         // controls.setLayout(new BorderLayout());
         // Button Row (Horizontal)
         JPanel buttonsPanel = new JPanel();
-        buttonsPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5)); // Horizontal button layout
+        buttonsPanel.setLayout(new FlowLayout()); // Horizontal button layout
         buttonsPanel.setBackground(Color.BLACK);
         buttonsPanel.add(shuffleLabel);
         buttonsPanel.add(prevLabel);
@@ -809,13 +835,12 @@ public class MusicPlayerUI extends JFrame {
         nowPlayingLabel.setAlignmentX(bottomPanel.CENTER_ALIGNMENT);
 
         bottomPanel.add(buttonsPanel); // First row: buttons
+        buttonsPanel.setAlignmentX(bottomPanel.CENTER_ALIGNMENT); // Center alignment
 
         bottomPanel.add(sliderPanel, CENTER_ALIGNMENT); // Seek slider
+        bottomPanel.setAlignmentX(bottomPanel.CENTER_ALIGNMENT); // Center alignment
+
         bottomPanel.add(Box.createVerticalStrut(20)); // Spacing
-
-        bottomPanel.add(controls); // Optional controls panel (if any)
-
-        controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         // ----------------------------------------------------------------------------------------------------
         //  for search result pannel
@@ -824,6 +849,7 @@ public class MusicPlayerUI extends JFrame {
         searchResultsPanel.setBackground(new Color(30, 30, 30));
         searchResultsPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
         searchResultsPanel.add(new JScrollPane(songList), BorderLayout.CENTER);
+        searchResultsPanel.setPreferredSize(new Dimension(1500, 700)); // Set a preferred size for the panel
         searchResultsPanel.setBounds(searchField.getX(), searchField.getY() + searchField.getHeight(), searchField.getWidth(), 120);
         centerpanel.add(searchResultsPanel, "search");
 
@@ -855,7 +881,6 @@ public class MusicPlayerUI extends JFrame {
         // controls.add(volumePanel, BorderLayout.EAST);
         add(searchPanel, BorderLayout.NORTH);
         add(centerpanel);
-        add(controls, BorderLayout.SOUTH);
         add(bottomPanel, BorderLayout.SOUTH);
 
         MouseAdapter globalFocusListener = new MouseAdapter() {
@@ -863,6 +888,7 @@ public class MusicPlayerUI extends JFrame {
             public void mousePressed(MouseEvent e) {
                 Component clicked = SwingUtilities.getDeepestComponentAt(e.getComponent(), e.getX(), e.getY());
                 if (clicked != searchField && clicked != songList) {
+                    isSearched = false; // Reset search state
                     hideSearchPanel();
                     requestFocusInWindow();    // Remove focus from search
                 }
@@ -880,19 +906,21 @@ public class MusicPlayerUI extends JFrame {
 
     // -------------------------------------------METHODS------------------------------------------------------
     private void playCurrentSong() {
+        seekSlider.setValue(0);
         nowPlayingLabel.setForeground(Color.white);
         // centerLayout.show(centerpanel, "wheel");
         rotatingWheePanel.setVisible(true);
         rotatingWheePanel.startRotationAtNewSong();
         playPauseLabel.setForeground(Color.GREEN); // Reset color
         hideSearchPanel();
-        List<Song> playList;
+        List<Song> playList = service.getAllSongs(); // Default to all songs
 
         // Decide playlist based on search & shuffle state
         if (isSearched) {
             playList = searchedSongs;
-        } else {
-            playList = songs;
+        }
+        if (isPrev && !isSearched) {
+            playList = prevList;
         }
 
         // If shuffle is enabled, pick random index from 'songs'
@@ -901,23 +929,19 @@ public class MusicPlayerUI extends JFrame {
             playList = songs; // Always shuffle from full song list
         }
 
-
         // Handle empty playlist safely
         if (playList.isEmpty() || currentIndex < 0 || currentIndex >= playList.size()) {
-            // if(isPrev){
-            //     playList = prevList;
-            // } else{
-            //     playList = songs;
-            // }
-            // playList = songs;
-            if(isPrev){
-                playList = prevList;
-            }
-            System.out.println(currentIndex);
-            System.out.println("No valid song to play.");
-            return;
-        }
 
+            // if(isPrev){
+            if (isPrev) {
+                playList = prevList;
+
+            } else {
+                playList = songs;
+                currentIndex = (int) (Math.random() * songs.size()); // Random index from full list
+            }
+
+        }
         Song song = playList.get(currentIndex);
 
         // Priority to queue
@@ -940,16 +964,21 @@ public class MusicPlayerUI extends JFrame {
             song = playList.get(currentIndex);
         }
 
+        if (isRepeatEnabled) {
+            song = service.getSongById(player.getMediaSongId()); // Use full list for indexing
+        }
+
         nowPlayingLabel.setText("🎶 Now Playing: " + song.getTitle() + " - " + song.getArtist());
         songList.setSelectedIndex(currentIndex);
         isPlaying[0] = true;
         playPauseLabel.setText("⏸️");
-        seekSlider.setValue(0);
         currentTimeLabel.setForeground(new Color(255, 255, 255));
         totalTimeLabel.setForeground(new Color(255, 255, 255));
 
         if (!isPrev || isShuffleEnabled) {
-            prevList.add(song);
+            if (!isRepeatEnabled) {
+                prevList.add(song);
+            }
         }
 
         for (Song prevSong : prevList) {
@@ -980,7 +1009,10 @@ public class MusicPlayerUI extends JFrame {
             // currentIndex = nextIndex;
             isSearched = false;
             isPrev = false;
-            isShuffleEnabled = true; // auto-enable shuffle
+            if (!isRepeatEnabled) {
+
+                isShuffleEnabled = true; // auto-enable shuffle
+            }
             shuffleLabel.setForeground(Color.GREEN); // reflect UI change
             playCurrentSong();
             // } else {
@@ -989,6 +1021,7 @@ public class MusicPlayerUI extends JFrame {
             // }
 
             stopSeekTimer();
+            startSeekTimer();
         });
 
         startSeekTimer();
