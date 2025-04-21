@@ -33,5 +33,10 @@ update songs set filepath = "C:\\Users\\Lenovo\\Music\\mp3\\Imagine Dragons - Be
 
 
 
+-- create a column for the image of the song
+alter table songs modify column song_img longblob;
+
+delete id from songs where id =(select max(id) from songs);
+
 
 

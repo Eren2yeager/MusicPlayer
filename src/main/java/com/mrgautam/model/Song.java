@@ -1,13 +1,19 @@
 package com.mrgautam.model;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import javax.swing.ImageIcon;
 
 import com.mrgautam.database.DBManager;
 
@@ -92,6 +98,69 @@ public class Song {
         
         return media;
 
+    }
+    
+     public void addSongImage(String imagePath) {
+        String query = "UPDATE songs SET song_img = ? WHERE id = ?";
+        
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             FileInputStream fis = new FileInputStream(new File(imagePath))) {
+            
+            stmt.setBinaryStream(1, fis, (int) new File(imagePath).length());
+            stmt.setInt(2, getId());
+
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("Image inserted successfully for song ID: " + getId());
+            } else {
+                System.out.println("No song found with ID: " + getId());
+            }
+        } catch (FileNotFoundException e) {
+            System.err.println("Image file not found: " + imagePath);
+            e.printStackTrace();
+        } catch (SQLException e) {
+            System.err.println("Database error while adding image for song ID: " + getId());
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("Error reading image file: " + imagePath);
+            e.printStackTrace();
+        }
+    }
+
+    public ImageIcon getSongImage(int id) {
+        ImageIcon imageIcon=null;
+
+        String query = "SELECT song_img FROM songs WHERE id = ?";
+        try (Connection conn = DBManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                // Get the binary stream from DB
+                InputStream in = rs.getBinaryStream("song_img");
+
+                // Read image from stream
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                byte[] temp = new byte[1024];
+                int read;
+                while ((read = in.read(temp)) != -1) {
+                    buffer.write(temp, 0, read);
+                }
+
+                byte[] imageBytes = buffer.toByteArray();
+                imageIcon = new ImageIcon(imageBytes);
+
+
+            } else {
+                System.out.println("No image found in database!");
+            }
+
+        } catch (SQLException | IOException e) {
+            System.err.println("Database error while getting image for song ID: " + id);
+            e.printStackTrace();
+        }
+        return imageIcon;
     }
 
     @Override
