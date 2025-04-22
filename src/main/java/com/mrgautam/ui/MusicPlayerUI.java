@@ -44,7 +44,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
@@ -274,12 +273,14 @@ public class MusicPlayerUI extends JFrame {
         // for add to queue popup menu
         JPopupMenu popupMenu = new JPopupMenu();
         JMenuItem addToQueueItem = new JMenuItem("➕ Add to Queue");
-        JMenuItem addDetails = new JMenuItem("➕ Add Details");
+        JMenuItem editDetails = new JMenuItem("➕ Edit Details");
 
         addToQueueItem.setBackground(new Color(40, 40, 40));
         addToQueueItem.setForeground(Color.WHITE);
+        editDetails.setBackground(new Color(40, 40, 40));
+        editDetails.setForeground(Color.WHITE);
         popupMenu.add(addToQueueItem);
-        popupMenu.add(addDetails);
+        popupMenu.add(editDetails);
         songList.setComponentPopupMenu(popupMenu);
 
         // ----------------------------------------------------------------------------------
@@ -609,6 +610,30 @@ public class MusicPlayerUI extends JFrame {
                 }
             }
         });
+
+        editDetails.addActionListener(e -> {
+            Song selectedSong = songList.getSelectedValue(); // safer and cleaner
+
+            if (selectedSong != null) {
+                Song currentSong;
+                if (isSearched && currentIndex >= 0 && currentIndex < searchedSongs.size()) {
+                    currentSong = searchedSongs.get(currentIndex);
+                } else if (!isSearched && currentIndex >= 0 && currentIndex < songs.size()) {
+                    currentSong = songs.get(currentIndex);
+                } else {
+                    currentSong = null;
+                }
+
+                if (selectedSong != null) {
+                    queue.add(selectedSong);
+                    nowPlayingLabel.setText("✅ Added to Queue: " + selectedSong.getTitle() + " - " + selectedSong.getArtist());
+                    nowPlayingLabel.setForeground(Color.GREEN);
+                }
+            }
+        });
+
+
+
         // ----------------------------------------------------------------------
         //To make the right-click work more naturally (when user right-clicks but doesn't select first), add this:
 
@@ -665,97 +690,13 @@ public class MusicPlayerUI extends JFrame {
                     File selectedFile = new File(selectedDir, selectedFileName);
 
                     if (selectedFile != null && selectedFile.getName().toLowerCase().endsWith(".mp3")) {
-                        // Step 2: Custom Dark Themed Input Panel
-                        JTextField titleField = new JTextField(30);
-                        JTextField artistField = new JTextField(30);
-                        JTextField songImageFeild = new JTextField(30);
 
-                        Font font = new Font("Segoe UI Symbol", Font.PLAIN, 14);
-                        Color bgColor = new Color(30, 30, 30, (int) (0.9f * 255)); // Semi-transparent black
-                        Color fgColor = Color.WHITE;
+                        SongDetailsPanel addDetailsPanel = new SongDetailsPanel();
 
-                        titleField.setBackground(bgColor);
-                        titleField.setForeground(fgColor);
-                        titleField.setFont(font);
-                        // titleField.setCaretColor(fgColor);
-                        titleField.setBorder(BorderFactory.createCompoundBorder(
-                                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
-                                new EmptyBorder(5, 5, 5, 5) // Padding inside the border
-                        ));
-
-                        artistField.setBackground(bgColor);
-                        artistField.setForeground(fgColor);
-                        artistField.setFont(font);
-                        // artistField.setCaretColor(fgColor);
-                        artistField.setBorder(BorderFactory.createCompoundBorder(
-                                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
-                                new EmptyBorder(5, 5, 5, 5) // Padding inside the border
-                        ));
-
-                        songImageFeild.setBackground(bgColor);
-                        songImageFeild.setForeground(fgColor);
-                        songImageFeild.setFont(font);
-                        // artistField.setCaretColor(fgColor);
-                        songImageFeild.setBorder(BorderFactory.createCompoundBorder(
-                                new LineBorder(Color.GRAY, 1, true), // `true` makes it rounded
-                                new EmptyBorder(5, 5, 5, 5) // Padding inside the border
-                        ));
-
-                        JLabel titleLabel = new JLabel("Title:");
-                        JLabel artistLabel = new JLabel("Artist:");
-                        JLabel addImagelabel = new JLabel("Add Song Image (OPTIONAL):");
-
-                        titleLabel.setForeground(fgColor);
-                        artistLabel.setForeground(fgColor);
-                        addImagelabel.setForeground(fgColor);
-
-                        JButton addImageButton = new JButton(" ➕ Add Image");
-                        addImageButton.setForeground(fgColor);
-                        addImageButton.setBackground(Color.ORANGE);
-                        addImageButton.setFocusPainted(false);
-                        addImageButton.setFont(font);
-                        addImageButton.setPreferredSize(new Dimension(100, 30));
-
-                        JPanel panel = new JPanel();
-                        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-                        panel.setBackground(Color.black);
-                        panel.add(Box.createVerticalStrut(10));
-                        panel.add(titleLabel);
-                        panel.add(titleField);
-                        panel.add(Box.createVerticalStrut(10));
-                        panel.add(artistLabel);
-                        panel.add(artistField);
-                        panel.add(Box.createVerticalStrut(10));
-                        panel.add(addImagelabel);
-                        panel.add(songImageFeild);
-                        panel.add(Box.createVerticalStrut(10));
-                        panel.add(addImageButton);
-                        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-                        addImageButton.addActionListener(ev -> {
-                            FileDialog fileDialog1 = new FileDialog((java.awt.Frame) null, "Select Image File", FileDialog.LOAD);
-                            fileDialog1.setFilenameFilter((dir, name) -> name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".png") || name.toLowerCase().endsWith(".jpeg"));
-                            fileDialog1.setVisible(true);
-                            if (fileDialog1.getFile() != null) {
-                                songImageFeild.setText(new File(fileDialog1.getDirectory(), fileDialog1.getFile()).getAbsolutePath());
-                            }
-                        });
-
-                        UIManager.put("Panel.background", Color.BLACK);
-                        UIManager.put("OptionPane.background", bgColor);
-                        UIManager.put("OptionPane.messageForeground", fgColor);
-                        UIManager.put("Button.background", new Color(50, 50, 50));
-                        UIManager.put("Button.foreground", Color.WHITE);
-                        UIManager.put("Button.font", font);
-
-                        int inputResult = JOptionPane.showConfirmDialog(
-                                null, panel, "Add Song Details", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE
-                        );
-
-                        if (inputResult == JOptionPane.OK_OPTION) {
-                            String title = titleField.getText().trim();
-                            String artist = artistField.getText().trim();
-                            String imagePath = songImageFeild.getText().trim();
+                        if (addDetailsPanel.inputResult == JOptionPane.OK_OPTION) {
+                            String title = addDetailsPanel.titleField.getText().trim();
+                            String artist = addDetailsPanel.artistField.getText().trim();
+                            String imagePath = addDetailsPanel.songImageFeild.getText().trim();
 
                             if (!title.isEmpty() && !artist.isEmpty()) {
                                 Song newSong = new Song(0, title, artist, selectedFile.getAbsolutePath());
@@ -774,10 +715,7 @@ public class MusicPlayerUI extends JFrame {
                                 if (isSongAdded) {
                                     searchedSongs = service.getAllSongs();
                                     listModel.clear();
-                                    for (Song song : searchedSongs) {
-                                        listModel.addElement(song);
-                                    }
-
+                                    updateSongListDisplay(searchedSongs);
                                     filtersearchedSongs(); // refresh if searched
                                     nowPlayingLabel.setText("🎉 Added: " + title + " - " + artist);
                                     nowPlayingLabel.setForeground(Color.GREEN);
