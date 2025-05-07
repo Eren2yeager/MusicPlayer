@@ -1,8 +1,5 @@
 package com.mrgautam;
 
-// import com.mrgautam.model.Song;
-// import com.mrgautam.service.SongService;
-
 import javax.swing.SwingUtilities;
 
 import com.mrgautam.ui.MusicPlayerUI;
@@ -20,7 +17,11 @@ public class Main {
             
             // Now create and show your Swing UI
             MusicPlayerUI musicPlayerUI = new MusicPlayerUI();
+
             musicPlayerUI.setVisible(true);
+// 
+            // NotificationService nService = new NotificationService();
+            // nService.openAppMail();
         });
         // SongService songService = new SongService();
         // Song song =songService.getSongById(15);

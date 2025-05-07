@@ -38,5 +38,14 @@ alter table songs modify column song_img longblob;
 
 delete id from songs where id =(select max(id) from songs);
 
+create table if not exists lastSong(
+  id int,
+  title VARCHAR(255),
+  artist VARCHAR(255)
+);
+INSERT INTO lastsong VALUES(null,null,null);
+
+TRUNCATE lastSong;
+
 
 

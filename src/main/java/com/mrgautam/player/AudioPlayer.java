@@ -61,6 +61,11 @@ public class AudioPlayer {
 
     public void setVolume(double volume) {
         if (mediaPlayer != null) mediaPlayer.setVolume(volume); // 0.0 to 1.0
+        mediaPlayer.getVolume();
+    }
+    
+    public double getVolume() {
+        return mediaPlayer.getVolume();
     }
 
     public boolean isPaused() {

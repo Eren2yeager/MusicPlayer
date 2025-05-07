@@ -3,9 +3,7 @@ package com.mrgautam.model;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
@@ -66,6 +64,77 @@ public class Song {
         this.filePath = filePath;
     }
 
+    // public Boolean updateTitle(String newTitle){
+    //     try {
+    //         Connection conn = DBManager.getConnection();
+    //         PreparedStatement ps = conn.prepareStatement("UPDATE songs SET title = ? WHERE id = ?");
+    //         ps.setString(1, newTitle);
+    //         ps.setInt(2,getId());
+    //     } catch (Exception e) {
+    //     }
+    //     return  false;
+    // }
+    public Boolean updateTitle(String newTitle) {
+        try {
+            String query = "UPDATE songs SET title = ? WHERE id = ?";
+
+            Connection conn = DBManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1,newTitle);
+            stmt.setInt(2,getId());
+            int rows = stmt.executeUpdate();
+
+            if (rows > 0) {
+                System.out.println("Title Update succesful for : " + getId());
+                return true;
+            } else {
+                System.out.println("No song found with ID: " + getId());
+                return false;
+
+            }
+        } catch (Exception ex) {
+            ex.getMessage();
+            return false;
+
+        }
+
+    }
+
+    public Boolean updateArtist(String newArtist) {
+        try {
+            String query = "UPDATE songs SET artist = ? WHERE id = ?";
+
+            Connection conn = DBManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1,newArtist);
+            stmt.setInt(2,getId());
+            int rows = stmt.executeUpdate();
+
+            if (rows > 0) {
+                System.out.println("Artist Update succesful for : " + getId());
+                return true;
+            } else {
+                System.out.println("No song found with ID: " + getId());
+                return false;
+
+            }
+        } catch (Exception ex) {
+            ex.getMessage();
+            return false;
+        }
+    }
+
+    public Boolean updateSongImage(String imagePath) {
+        try {
+            addSongImage(imagePath);
+            return true;
+        } catch (Exception ex) {
+            System.out.println(ex.getClass());
+            return false;
+        }
+
+    }
+
     public static Media getMedia(int songId) throws SQLException {
 
         Media media = null; // Declare media variable here
@@ -95,18 +164,16 @@ public class Song {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         return media;
 
     }
-    
-     public void addSongImage(String imagePath) {
+
+    public void addSongImage(String imagePath) {
         String query = "UPDATE songs SET song_img = ? WHERE id = ?";
-        
-        try (Connection conn = DBManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query);
-             FileInputStream fis = new FileInputStream(new File(imagePath))) {
-            
+
+        try (Connection conn = DBManager.getConnection(); PreparedStatement stmt = conn.prepareStatement(query); FileInputStream fis = new FileInputStream(new File(imagePath))) {
+
             stmt.setBinaryStream(1, fis, (int) new File(imagePath).length());
             stmt.setInt(2, getId());
 
@@ -116,24 +183,17 @@ public class Song {
             } else {
                 System.out.println("No song found with ID: " + getId());
             }
-        } catch (FileNotFoundException e) {
-            System.err.println("Image file not found: " + imagePath);
-            e.printStackTrace();
-        } catch (SQLException e) {
-            System.err.println("Database error while adding image for song ID: " + getId());
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.err.println("Error reading image file: " + imagePath);
-            e.printStackTrace();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+
         }
     }
 
     public ImageIcon getSongImage(int id) {
-        ImageIcon imageIcon=null;
+        ImageIcon imageIcon = null;
 
         String query = "SELECT song_img FROM songs WHERE id = ?";
-        try (Connection conn = DBManager.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(query)) {
+        try (Connection conn = DBManager.getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
@@ -151,14 +211,12 @@ public class Song {
                 byte[] imageBytes = buffer.toByteArray();
                 imageIcon = new ImageIcon(imageBytes);
 
-
             } else {
                 System.out.println("No image found in database!");
             }
 
-        } catch (SQLException | IOException e) {
-            System.err.println("Database error while getting image for song ID: " + id);
-            e.printStackTrace();
+        } catch (Exception e) {
+            e.getMessage();
         }
         return imageIcon;
     }

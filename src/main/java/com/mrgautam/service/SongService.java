@@ -23,11 +23,7 @@ public class SongService {
         try (Connection conn = DBManager.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
 
             while (rs.next()) {
-                Song song = new Song(
-                        rs.getInt("id"),
-                        rs.getString("title"),
-                        rs.getString("artist"),
-                        rs.getString("filepath"));
+                Song song = new Song(rs.getInt("id"),rs.getString("title"),rs.getString("artist"),rs.getString("filepath"));
                 songs.add(song);
             }
 
@@ -117,6 +113,63 @@ public class SongService {
             e.printStackTrace();
         }
         return -1; // error fallback
+    }
+
+    public Boolean addLastSong(Song lastSong) {
+        String deleteQuery = "DELETE FROM lastsong;";
+        String insertQuery = "INSERT INTO lastsong (id, title, artist) VALUES (?, ?, ?);";
+        try (Connection conn = DBManager.getConnection(); PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+            deleteStmt.executeUpdate();
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                insertStmt.setInt(1, lastSong.getId());
+                insertStmt.setString(2, lastSong.getTitle());
+                insertStmt.setString(3, lastSong.getArtist());
+                return insertStmt.executeUpdate() > 0;
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+
+    }
+
+    public int getLastSongIndex() {
+        String query = "SELECT id  FROM lastsong WHERE id =(SELECT MAX(id) FROM lastsong);";
+        try (Connection conn = DBManager.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
+            int lastSongId = -1;
+            if (rs.next()) {
+                lastSongId = rs.getInt("id");
+            }
+            return lastSongId;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return -1; // error fallback
+        }
+    }
+
+    public Boolean deleteSong(Song song) {
+        String deleteQuery = "DELETE FROM songs WHERE id = ?";
+        try (Connection conn = DBManager.getConnection(); PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+
+            int id = song.getId();
+            System.out.println("Attempting to delete song with ID: " + id);
+
+            deleteStmt.setInt(1, id);
+            int rowsAffected = deleteStmt.executeUpdate();
+
+            if (rowsAffected == 0) {
+                System.out.println("⚠️ No song was deleted. ID might not exist.");
+            } else {
+                System.out.println("✅ Song deleted successfully.");
+            }
+
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            System.out.println("❌ SQLException: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
 }

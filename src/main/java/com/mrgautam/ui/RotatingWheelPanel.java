@@ -67,20 +67,25 @@ public class RotatingWheelPanel extends JPanel {
     }
 
     public static BufferedImage iconToBufferedImage(ImageIcon icon) {
-        Image img = icon.getImage();
+        try {
+            Image img = icon.getImage();
 
-        // Create a buffered image with transparency
-        BufferedImage buffered = new BufferedImage(
-                icon.getIconWidth(),
-                icon.getIconHeight(),
-                BufferedImage.TYPE_INT_ARGB);
+            // Create a buffered image with transparency
+            BufferedImage buffered = new BufferedImage(
+                    icon.getIconWidth(),
+                    icon.getIconHeight(),
+                    BufferedImage.TYPE_INT_ARGB);
 
-        // Draw the image on to the buffered image
-        Graphics2D g2d = buffered.createGraphics();
-        g2d.drawImage(img, 0, 0, null);
-        g2d.dispose();
+            // Draw the image on to the buffered image
+            Graphics2D g2d = buffered.createGraphics();
+            g2d.drawImage(img, 0, 0, null);
+            g2d.dispose();
 
-        return buffered;
+            return buffered;
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+            return null;
+        }
     }
 
     @Override
@@ -202,7 +207,7 @@ public class RotatingWheelPanel extends JPanel {
             g2d.dispose();
 
             setLayout(new java.awt.BorderLayout());
-            addImageLabel.setPreferredSize(new java.awt.Dimension(100, 20));
+            addImageLabel.setPreferredSize(new java.awt.Dimension(50, 20));
             addImageLabel.setFont(addImageLabel.getFont().deriveFont(12f));
             addImageLabel.setForeground(Color.LIGHT_GRAY);
             addImageLabel.setBackground(Color.DARK_GRAY);
